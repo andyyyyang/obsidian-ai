@@ -141,7 +141,10 @@ export function EmploymentPeriods({
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-500">
-        混合制資歷：可登記多段（如工讀 → 正職）；標示「計入年資」的時段會合併到特休年資計算。
+        混合制資歷：可登記多段（如工讀 → 正職）。
+        <br />
+        <strong>依勞基法及公司政策，只有「正職」段會計入特休年資</strong>，
+        兼職 / 工讀 / 約聘僅作為履歷記錄，不影響特休天數。
       </p>
 
       {rows.length === 0 ? (
@@ -183,10 +186,20 @@ export function EmploymentPeriods({
                 placeholder="備註（選填）"
                 className="input !py-1.5 text-xs"
               />
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs">
+              <label
+                className={`inline-flex items-center gap-1.5 text-xs ${
+                  r.type === "FULL_TIME" ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                }`}
+                title={
+                  r.type === "FULL_TIME"
+                    ? undefined
+                    : "依公司政策只有正職計入特休年資"
+                }
+              >
                 <input
                   type="checkbox"
-                  checked={r.countsTowardSeniority}
+                  checked={r.type === "FULL_TIME" && r.countsTowardSeniority}
+                  disabled={r.type !== "FULL_TIME"}
                   onChange={(e) => update(i, "countsTowardSeniority", e.target.checked)}
                   className="h-3.5 w-3.5"
                 />

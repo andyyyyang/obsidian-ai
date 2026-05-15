@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { logAudit, parseDateInput } from "@/lib/leave-actions";
 import { countLeaveDays, getCurrentAnniversaryYear } from "@/lib/leave";
+import { effectiveHireDate } from "@/lib/service";
 import { getBalance } from "@/lib/balance";
 
 const schema = z.object({
@@ -34,7 +35,17 @@ export async function POST(req: Request) {
   // 對象必須是自己屬下（ADMIN 不受此限）
   const target = await prisma.user.findUnique({
     where: { id: data.userId },
-    select: { id: true, name: true, hireDate: true, managerId: true, active: true, annualLeaveEnabled: true },
+    select: {
+      id: true,
+      name: true,
+      hireDate: true,
+      managerId: true,
+      active: true,
+      annualLeaveEnabled: true,
+      employmentPeriods: {
+        select: { type: true, startDate: true, endDate: true, countsTowardSeniority: true },
+      },
+    },
   });
   if (!target) return NextResponse.json({ error: "員工不存在" }, { status: 404 });
   if (session.role === "MANAGER" && target.managerId !== session.userId) {
@@ -65,8 +76,9 @@ export async function POST(req: Request) {
   const days = countLeaveDays(start, end, isHalfDay);
 
   // 必須在同一週年度內
-  const startYear = getCurrentAnniversaryYear(target.hireDate, start);
-  const endYear = getCurrentAnniversaryYear(target.hireDate, end);
+  const targetEffective = effectiveHireDate(target.hireDate, target.employmentPeriods);
+  const startYear = getCurrentAnniversaryYear(targetEffective, start);
+  const endYear = getCurrentAnniversaryYear(targetEffective, end);
   if (!startYear || !endYear) {
     return NextResponse.json(
       { error: "日期不在員工可請假的特休年度（可能尚未滿 6 個月）" },

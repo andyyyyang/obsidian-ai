@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentAnniversaryYear, type AnniversaryYear } from "@/lib/leave";
+import { effectiveHireDate } from "@/lib/service";
 import { LeaveStatus } from "@prisma/client";
 
 export type BalanceSummary = {
@@ -18,7 +19,13 @@ export type BalanceSummary = {
 export async function getBalance(userId: string, asOf: Date = new Date()): Promise<BalanceSummary> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { hireDate: true, annualLeaveEnabled: true },
+    select: {
+      hireDate: true,
+      annualLeaveEnabled: true,
+      employmentPeriods: {
+        select: { type: true, startDate: true, endDate: true, countsTowardSeniority: true },
+      },
+    },
   });
   if (!user) {
     return {
@@ -45,7 +52,9 @@ export async function getBalance(userId: string, asOf: Date = new Date()): Promi
     };
   }
 
-  const year = getCurrentAnniversaryYear(user.hireDate, asOf);
+  // 若員工有「正職且計入年資」的經歷段，以該推算之有效到職日計算特休；否則沿用 hireDate
+  const effective = effectiveHireDate(user.hireDate, user.employmentPeriods, asOf);
+  const year = getCurrentAnniversaryYear(effective, asOf);
   if (!year) {
     return {
       year: null,

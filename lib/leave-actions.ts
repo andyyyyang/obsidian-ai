@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { LeaveStatus, type HalfDayPeriod } from "@prisma/client";
 import { isAfter, isBefore, startOfDay } from "date-fns";
 import { countLeaveDays, getCurrentAnniversaryYear } from "@/lib/leave";
+import { effectiveHireDate } from "@/lib/service";
 import { getBalance } from "@/lib/balance";
 
 export type CreateLeaveInput = {
@@ -54,15 +55,22 @@ export async function validateLeaveRequest(
   // 取得使用者到職日，計算本年度週年期
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { hireDate: true, annualLeaveEnabled: true },
+    select: {
+      hireDate: true,
+      annualLeaveEnabled: true,
+      employmentPeriods: {
+        select: { type: true, startDate: true, endDate: true, countsTowardSeniority: true },
+      },
+    },
   });
   if (!user) return { ok: false, error: "查無使用者" };
   if (!user.annualLeaveEnabled) {
     return { ok: false, error: "您目前的職位不享有特休，無法申請。如需開通請聯絡 HR。" };
   }
 
-  const startYear = getCurrentAnniversaryYear(user.hireDate, start);
-  const endYear = getCurrentAnniversaryYear(user.hireDate, end);
+  const effective = effectiveHireDate(user.hireDate, user.employmentPeriods);
+  const startYear = getCurrentAnniversaryYear(effective, start);
+  const endYear = getCurrentAnniversaryYear(effective, end);
   if (!startYear || !endYear) {
     return { ok: false, error: "申請日期不在可請假的特休年度內（可能尚未滿 6 個月）" };
   }
