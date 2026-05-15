@@ -10,11 +10,15 @@ export type Period = {
   note?: string | null;
 };
 
-/** 合併重疊區段、扣除重疊部分。回傳合併後不重疊的時間段（僅計入年資的）。 */
+/**
+ * 合併重疊區段、扣除重疊部分。回傳合併後不重疊的時間段。
+ * **注意**：依公司政策，僅「正職（FULL_TIME）」會計入特休年資；
+ * 兼職、工讀、約聘即使勾選「計入年資」也會被忽略。
+ */
 function mergeCredited(periods: Period[], asOf: Date): { start: Date; end: Date }[] {
   const today = startOfDay(asOf);
   const segs = periods
-    .filter((p) => p.countsTowardSeniority)
+    .filter((p) => p.countsTowardSeniority && p.type === "FULL_TIME")
     .map((p) => ({
       start: startOfDay(p.startDate),
       end: startOfDay(p.endDate ?? today),
@@ -63,6 +67,20 @@ export function suggestedHireDate(periods: Period[], asOf: Date = new Date()): D
   const days = creditedDays(periods, asOf);
   if (days <= 0) return null;
   return startOfDay(addDays(asOf, -(days - 1)));
+}
+
+/**
+ * 取得「實際用於特休計算的到職日」：
+ * - 若該員工有任何「正職且計入年資」的段 → 回傳依該段推算的有效到職日
+ * - 否則回傳原 hireDate（向下相容）
+ */
+export function effectiveHireDate(
+  hireDate: Date,
+  periods: Period[],
+  asOf: Date = new Date(),
+): Date {
+  const suggested = suggestedHireDate(periods, asOf);
+  return suggested ?? hireDate;
 }
 
 /** 取得「目前」雇用類型（最新尚未結束 / 最近結束的段）*/
