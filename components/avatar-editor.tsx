@@ -14,6 +14,7 @@ import {
   CATEGORY_LABELS,
   MapleCategoryKey,
   MAPLE_ITEM_CATALOG,
+  OUTFIT_PRESETS,
   SKINS,
 } from "@/lib/maple-items";
 
@@ -192,8 +193,27 @@ export function AvatarEditor({
         </div>
       </div>
 
-      {/* 右：分類 tab + 道具網格 */}
+      {/* 右：快速套裝 + 分類 tab + 道具網格 */}
       <div>
+        {/* 快速套裝 */}
+        <div className="mb-4">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            🎁 快速套裝（一鍵變身）
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {OUTFIT_PRESETS.map((p) => (
+              <button
+                key={p.name}
+                onClick={() => setLook({ ...look, ...p.partial })}
+                className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900 transition hover:scale-105 hover:bg-amber-100 hover:shadow"
+              >
+                <span>{p.emoji}</span>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 膚色 — 獨立小區 */}
         <div className="mb-4">
           <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">膚色</div>
