@@ -35,6 +35,14 @@ export function ChatWidget() {
               const incoming = data.messages.filter((m: ChatMessage) => !ids.has(m.id));
               return [...cur, ...incoming];
             });
+            // 廣播給場景，讓對應角色頭上冒泡
+            for (const m of data.messages as ChatMessage[]) {
+              window.dispatchEvent(
+                new CustomEvent("chat:new", {
+                  detail: { authorId: m.author.id, content: m.content },
+                }),
+              );
+            }
             if (!open) setUnread((n) => n + data.messages.length);
           }
         } else {
@@ -86,6 +94,12 @@ export function ChatWidget() {
         return;
       }
       setMessages((cur) => [...cur, data]);
+      // 自己送的訊息也要在自己角色頭上冒泡
+      window.dispatchEvent(
+        new CustomEvent("chat:new", {
+          detail: { authorId: data.author.id, content: data.content },
+        }),
+      );
       setDraft("");
     } finally {
       setSending(false);

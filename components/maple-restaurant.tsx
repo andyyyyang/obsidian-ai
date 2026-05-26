@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildMapleAvatarUrl, MapleLook } from "@/lib/maple-avatar";
-import { buildMapleMapUrl, DEFAULT_RESTAURANT_MAP_ID } from "@/lib/maple-maps";
+import { buildMapleMapUrl, DEFAULT_RESTAURANT_MAP_ID, getMapPreset } from "@/lib/maple-maps";
 
 export type RestaurantOccupant = {
   id: string;
@@ -12,8 +12,8 @@ export type RestaurantOccupant = {
   statusMessage?: string | null;
   onBreak?: boolean;
   isSelf?: boolean;
-  onShift?: boolean;   // 今日已打卡且尚未下班
-  online?: boolean;    // 過去 5 分鐘有 ping (即仍在線)
+  onShift?: boolean;
+  online?: boolean;
 };
 
 type CharSprite = {
@@ -22,35 +22,35 @@ type CharSprite = {
   targetX: number;        // % 目的地
   flip: boolean;
   walking: boolean;
-  walkFrame: 0 | 1 | 2;   // walk1 動畫幀
-  walkClock: number;      // 換幀計時
+  walkFrame: 0 | 1 | 2;
+  walkClock: number;
   idleTimer: number;
-  bobOffset: number;      // 站立時的呼吸 / 走路時的彈跳
+  bobOffset: number;
+  chatBubble: string | null;   // 暫時冒泡 (對話框訊息)
+  chatBubbleAt: number;        // 冒泡產生時間 ms
 };
 
-// 地板 Y 線 — 不同地圖略有差異，數值用 % 表示 (從上往下算)
-// 92% 對應大多數楓谷室內地圖被 16:7 裁切後的「底層木地板 / 石板」
-const DEFAULT_FLOOR_Y_PCT = 92;
-// 角色腳底距離 floor Y 的偏移 (向上)
-const SPRITE_FOOT_OFFSET = 0;
+const CHAT_BUBBLE_DURATION_MS = 8_000;
 // 走路速度 (%/秒)
 const WALK_SPEED = 18;
-// 走路動畫每幀停留時間
 const WALK_FRAME_DURATION = 0.14;
 
 export function MapleRestaurant({
   occupants,
   mapId = DEFAULT_RESTAURANT_MAP_ID,
-  floorYPct = DEFAULT_FLOOR_Y_PCT,
+  floorYPct,
   className,
   showNames = true,
 }: {
   occupants: RestaurantOccupant[];
   mapId?: number;
-  floorYPct?: number;     // 自訂地板 Y%（不同地圖可微調）
+  floorYPct?: number;
   className?: string;
   showNames?: boolean;
 }) {
+  const preset = getMapPreset(mapId);
+  const effectiveFloorY = floorYPct ?? preset.floorYPct;
+
   const mapUrl = buildMapleMapUrl(mapId);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const spritesRef = useRef<CharSprite[]>([]);
@@ -69,13 +69,27 @@ export function MapleRestaurant({
       : (e as React.MouseEvent).clientX;
     const xPct = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
 
-    // 找到「我自己」的 sprite，設新目標
     const selfSprite = spritesRef.current.find((s) => s.occupant.isSelf);
     if (selfSprite) {
       selfSprite.targetX = xPct;
-      selfSprite.idleTimer = 99999; // 取消下次隨機巡邏
+      selfSprite.idleTimer = 99999;
     }
   }
+
+  // 監聽聊天訊息 → 在角色頭上冒泡
+  useEffect(() => {
+    function onChat(e: Event) {
+      const ce = e as CustomEvent<{ authorId: string; content: string }>;
+      const sprite = spritesRef.current.find((s) => s.occupant.id === ce.detail.authorId);
+      if (sprite) {
+        sprite.chatBubble = ce.detail.content;
+        sprite.chatBubbleAt = Date.now();
+        setTick((t) => (t + 1) % 1_000_000);
+      }
+    }
+    window.addEventListener("chat:new", onChat);
+    return () => window.removeEventListener("chat:new", onChat);
+  }, []);
 
   // 量測容器尺寸
   useEffect(() => {
@@ -94,7 +108,7 @@ export function MapleRestaurant({
     spritesRef.current = occupants.map((o, i) => {
       const existing = prev.get(o.id);
       if (existing) return { ...existing, occupant: o };
-      const startX = 12 + ((i * 17) % 76);
+      const startX = 18 + ((i * 17) % 64);
       return {
         occupant: o,
         x: startX,
@@ -105,23 +119,32 @@ export function MapleRestaurant({
         walkClock: 0,
         idleTimer: 2 + Math.random() * 4,
         bobOffset: 0,
+        chatBubble: null,
+        chatBubbleAt: 0,
       };
     });
   }, [occupants]);
 
-  // 主 loop — 角色只在水平軸移動，Y 固定為地板
+  // 主 loop
   useEffect(() => {
     function step(time: number) {
       const dt = lastRef.current ? Math.min(0.05, (time - lastRef.current) / 1000) : 0.016;
       lastRef.current = time;
       let anyChange = false;
+      const now = Date.now();
 
       for (const s of spritesRef.current) {
+        // 過期的冒泡清掉
+        if (s.chatBubble && now - s.chatBubbleAt > CHAT_BUBBLE_DURATION_MS) {
+          s.chatBubble = null;
+          anyChange = true;
+        }
+
         // 非「我」的角色：隨機巡邏
         if (!s.occupant.isSelf) {
           s.idleTimer -= dt;
           if (s.idleTimer <= 0) {
-            s.targetX = 8 + Math.random() * 82;
+            s.targetX = 10 + Math.random() * 78;
             s.idleTimer = 4 + Math.random() * 8;
           }
         }
@@ -141,7 +164,6 @@ export function MapleRestaurant({
           anyChange = true;
         } else {
           s.walking = false;
-          // 站立時也會微微浮動（呼吸）
           s.bobOffset = Math.sin(time / 700 + s.x) * 0.4;
         }
       }
@@ -170,11 +192,10 @@ export function MapleRestaurant({
           touchAction: "manipulation",
         }}
       >
-        {/* 楓谷地圖背景 — 用 object-cover + 錨點 bottom，
-            畫面下方一定是地板，角色才能站對位置 */}
+        {/* 楓谷地圖背景 — center bottom 確保地板在畫面下方 */}
         <img
           src={mapUrl}
-          alt="restaurant map"
+          alt="map"
           className="absolute inset-0 h-full w-full"
           style={{
             imageRendering: "pixelated",
@@ -186,17 +207,16 @@ export function MapleRestaurant({
           draggable={false}
         />
 
-        {/* 載入失敗 fallback */}
         {mapLoadError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-100 via-orange-100 to-rose-100">
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-100 via-sky-100 to-emerald-100">
             <div className="text-center text-sm text-slate-600">
-              <div className="mb-2 text-3xl">🍜</div>
+              <div className="mb-2 text-3xl">🌙</div>
               地圖 #{mapId} 無法載入
             </div>
           </div>
         )}
 
-        {/* 自己角色的「目標位置」指示器 */}
+        {/* 目標位置指示器 */}
         {(() => {
           const self = spritesRef.current.find((s) => s.occupant.isSelf);
           if (!self || !self.walking) return null;
@@ -205,7 +225,7 @@ export function MapleRestaurant({
               style={{
                 position: "absolute",
                 left: `${self.targetX}%`,
-                top: `${floorYPct}%`,
+                top: `${effectiveFloorY}%`,
                 transform: "translate(-50%, -50%)",
                 width: 24,
                 height: 24,
@@ -226,7 +246,7 @@ export function MapleRestaurant({
           );
         })()}
 
-        {/* 角色 sprite — 全部站在地板線上 */}
+        {/* 角色 sprite */}
         {spritesRef.current.map((s) => {
           const stance = s.walking ? "walk1" : "stand1";
           const frame = s.walking ? s.walkFrame : 0;
@@ -237,13 +257,18 @@ export function MapleRestaurant({
             resize: 1,
             flipX: s.flip,
           });
+
+          // 顯示哪個訊息：chatBubble 優先（剛聊天）, 沒有就 statusMessage
+          const bubbleText = s.chatBubble ?? s.occupant.statusMessage ?? null;
+          const isChatBubble = !!s.chatBubble;
+
           return (
             <div
               key={s.occupant.id}
               style={{
                 position: "absolute",
                 left: `${s.x}%`,
-                top: `${floorYPct + SPRITE_FOOT_OFFSET}%`,
+                top: `${effectiveFloorY}%`,
                 transform: `translate(-50%, calc(-100% + ${s.bobOffset}px))`,
                 opacity: s.occupant.onBreak ? 0.55 : s.occupant.onShift === false ? 0.78 : 1,
                 transition: "opacity 0.4s",
@@ -288,26 +313,43 @@ export function MapleRestaurant({
                   )}
                 </div>
               )}
-              {s.occupant.statusMessage && (
+              {bubbleText && (
                 <div
                   style={{
                     position: "absolute",
                     left: "50%",
-                    top: "-36px",
+                    top: "-40px",
                     transform: "translateX(-50%)",
-                    background: "#fffbe6",
+                    background: isChatBubble ? "#ffffff" : "#fffbe6",
                     color: "#1a1410",
-                    border: "1.5px solid #1a1410",
-                    fontSize: "10px",
-                    padding: "2px 6px",
-                    borderRadius: "6px",
+                    border: isChatBubble ? "2px solid #2563eb" : "1.5px solid #1a1410",
+                    fontSize: isChatBubble ? "11px" : "10px",
+                    fontWeight: isChatBubble ? 600 : 400,
+                    padding: "3px 8px",
+                    borderRadius: "8px",
                     whiteSpace: "nowrap",
-                    maxWidth: "200px",
+                    maxWidth: "240px",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    boxShadow: isChatBubble ? "0 4px 12px rgba(37,99,235,0.4)" : "0 2px 4px rgba(0,0,0,0.2)",
+                    animation: isChatBubble ? "bubble-pop 0.3s ease-out" : undefined,
                   }}
                 >
-                  {s.occupant.statusMessage}
+                  {bubbleText}
+                  {/* 小箭頭 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: "-6px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 0,
+                      height: 0,
+                      borderLeft: "5px solid transparent",
+                      borderRight: "5px solid transparent",
+                      borderTop: isChatBubble ? "6px solid #2563eb" : "6px solid #1a1410",
+                    }}
+                  />
                 </div>
               )}
               <img
@@ -349,7 +391,7 @@ export function MapleRestaurant({
           className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white/90 backdrop-blur"
           style={{ fontFamily: "'PingFang TC', sans-serif" }}
         >
-          👆 點/觸碰地面 — 操控你的角色走過去
+          👆 點/觸碰地面 走動 · 右下角 💬 發訊息 (頭上會冒泡)
         </div>
       </div>
 
@@ -361,6 +403,11 @@ export function MapleRestaurant({
         @keyframes pulse-ring {
           0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 1; }
           100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+        }
+        @keyframes bubble-pop {
+          0%   { transform: translateX(-50%) scale(0.5); opacity: 0; }
+          60%  { transform: translateX(-50%) scale(1.1); opacity: 1; }
+          100% { transform: translateX(-50%) scale(1); opacity: 1; }
         }
       `}</style>
     </div>
