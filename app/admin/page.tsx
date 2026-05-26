@@ -1,98 +1,39 @@
 import Link from "next/link";
-import { addMonths, format, startOfMonth } from "date-fns";
-import { ArrowUpRight, ClipboardList, Users, Wallet } from "lucide-react";
-import { LeaveStatus } from "@prisma/client";
+import { ArrowUpRight, Building2, ClipboardList, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAnniversaryYear } from "@/lib/leave";
+import { tpeDayRange, tpeToday } from "@/lib/tz";
 import { GlassCard } from "@/components/glass-card";
-import { DeptPieChart, MonthlyApprovedChart } from "@/components/admin-charts";
 
 export const dynamic = "force-dynamic";
 
-async function getMonthlyApproved(): Promise<{ month: string; days: number }[]> {
-  const now = new Date();
-  const months: { start: Date; end: Date; label: string }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const start = startOfMonth(addMonths(now, -i));
-    const end = startOfMonth(addMonths(start, 1));
-    months.push({ start, end, label: format(start, "yyyy-MM") });
-  }
-
-  const results = await Promise.all(
-    months.map(async (m) => {
-      const agg = await prisma.leaveRequest.aggregate({
-        where: { status: LeaveStatus.APPROVED, startDate: { gte: m.start, lt: m.end } },
-        _sum: { days: true },
-      });
-      return { month: m.label.slice(5), days: agg._sum.days ?? 0 };
-    }),
-  );
-  return results;
-}
-
-async function getDeptBreakdown(): Promise<{ department: string; days: number }[]> {
-  const yearStart = new Date(new Date().getFullYear(), 0, 1);
-  const requests = await prisma.leaveRequest.findMany({
-    where: { status: LeaveStatus.APPROVED, startDate: { gte: yearStart } },
-    include: { requester: { select: { department: true } } },
-  });
-  const map = new Map<string, number>();
-  for (const r of requests) {
-    const dept = r.requester.department ?? "未分配";
-    map.set(dept, (map.get(dept) ?? 0) + r.days);
-  }
-  return Array.from(map.entries())
-    .map(([department, days]) => ({ department, days }))
-    .sort((a, b) => b.days - a.days);
-}
-
 export default async function AdminHome() {
-  const [userCount, pendingCount, allUsers, payoutCount, monthly, dept] = await Promise.all([
+  const { start, end } = tpeDayRange(tpeToday());
+
+  const [employeeCount, activeRestaurantCount, todayPunchCount, todayPunches] = await Promise.all([
     prisma.user.count({ where: { active: true } }),
-    prisma.leaveRequest.count({ where: { status: LeaveStatus.PENDING } }),
-    prisma.user.findMany({ select: { id: true, hireDate: true } }),
-    prisma.leavePayout.count(),
-    getMonthlyApproved(),
-    getDeptBreakdown(),
+    prisma.restaurant.count({ where: { active: true } }),
+    prisma.attendance.count({ where: { punchedAt: { gte: start, lt: end } } }),
+    prisma.attendance.findMany({
+      where: { punchedAt: { gte: start, lt: end } },
+      orderBy: { punchedAt: "asc" },
+      select: { userId: true, type: true },
+    }),
   ]);
 
-  const today = new Date();
-  let pendingPayout = 0;
-  for (const u of allUsers) {
-    const cur = getCurrentAnniversaryYear(u.hireDate, today);
-    if (!cur || cur.yearIndex < 1) continue;
-    const prevStart = new Date(cur.start);
-    prevStart.setFullYear(prevStart.getFullYear() - 1);
-    const has = await prisma.leavePayout.findFirst({
-      where: { userId: u.id, anniversaryYearStart: prevStart },
-      select: { id: true },
-    });
-    if (!has) pendingPayout += 1;
-  }
+  const last = new Map<string, string>();
+  for (const p of todayPunches) last.set(p.userId, p.type);
+  const onShift = Array.from(last.values()).filter((t) => t !== "CLOCK_OUT").length;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="mb-2 text-3xl font-bold tracking-tight text-slate-900">總覽</h1>
-      <p className="mb-8 text-sm text-slate-500">公司目前的員工與請假狀況</p>
+      <h1 className="mb-2 text-3xl font-bold tracking-tight text-slate-900">店長後台</h1>
+      <p className="mb-8 text-sm text-slate-500">餐廳今日狀況一覽</p>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card href="/admin/users" label="在職員工" value={userCount} icon={<Users className="h-5 w-5" />} tone="blue" />
-        <Card href="/approvals" label="待審申請" value={pendingCount} icon={<ClipboardList className="h-5 w-5" />} tone={pendingCount > 0 ? "amber" : "blue"} />
-        <Card href="/admin/payouts" label="待結算折發" value={pendingPayout} icon={<Wallet className="h-5 w-5" />} tone={pendingPayout > 0 ? "amber" : "blue"} />
-        <Card href="/admin/payouts" label="已結算折發" value={payoutCount} icon={<Wallet className="h-5 w-5" />} tone="green" />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <GlassCard variant="strong" className="p-6">
-          <h2 className="mb-1 text-sm font-semibold text-slate-900">近 6 個月已核准請假天數</h2>
-          <p className="mb-4 text-xs text-slate-500">依「起始日」歸月份</p>
-          <MonthlyApprovedChart data={monthly} />
-        </GlassCard>
-        <GlassCard variant="strong" className="p-6">
-          <h2 className="mb-1 text-sm font-semibold text-slate-900">本年度部門請假分佈</h2>
-          <p className="mb-4 text-xs text-slate-500">{format(new Date(), "yyyy")} 年已核准</p>
-          <DeptPieChart data={dept} />
-        </GlassCard>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Card href="/admin/employees" label="在職員工" value={employeeCount} icon={<Users className="h-5 w-5" />} tone="blue" />
+        <Card href="/admin/restaurants" label="啟用分店" value={activeRestaurantCount} icon={<Building2 className="h-5 w-5" />} tone="blue" />
+        <Card href="/admin/attendance" label="今日打卡次數" value={todayPunchCount} icon={<ClipboardList className="h-5 w-5" />} tone="green" />
+        <Card href="/admin/attendance" label="目前在崗" value={onShift} icon={<Users className="h-5 w-5" />} tone={onShift > 0 ? "amber" : "blue"} />
       </div>
     </main>
   );

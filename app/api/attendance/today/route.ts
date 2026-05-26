@@ -18,7 +18,7 @@ export async function GET() {
       punchedAt: { gte: start, lt: end },
     },
     orderBy: { punchedAt: "asc" },
-    include: { office: { select: { name: true } } },
+    include: { restaurant: { select: { name: true } } },
   });
 
   return NextResponse.json({
@@ -27,7 +27,7 @@ export async function GET() {
       id: p.id,
       type: p.type,
       punchedAt: p.punchedAt.toISOString(),
-      officeName: p.office?.name,
+      restaurantName: p.restaurant?.name,
     })),
   });
 }

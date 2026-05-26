@@ -1,49 +1,31 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Calculator, CalendarCheck, Clock, Download, LayoutDashboard, Megaphone, Receipt, Users, Wallet } from "lucide-react";
+import { ArrowLeft, Building2, ChefHat, ClipboardList, Settings, Users } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session.userId) redirect("/login");
-  if (session.role !== "ADMIN") redirect("/");
+  if (session.role !== "ADMIN" && session.role !== "MANAGER") redirect("/");
 
   return (
     <div className="min-h-screen">
       <div className="sticky top-0 z-30 border-b border-white/40 bg-white/40 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
           <Link href="/admin" className="flex items-center gap-2 text-base font-bold text-gradient">
-            <LayoutDashboard className="h-5 w-5 text-ios-indigo" />
-            HR 後台
+            <Settings className="h-5 w-5 text-amber-600" />
+            店長後台
           </Link>
           <nav className="ml-2 flex flex-wrap gap-1 text-sm">
-            <NavLink href="/admin/users" icon={<Users className="h-4 w-4" />}>
+            <NavLink href="/admin/employees" icon={<Users className="h-4 w-4" />}>
               員工
             </NavLink>
-            <NavLink href="/admin/balances" icon={<Calculator className="h-4 w-4" />}>
-              餘額調整
+            <NavLink href="/admin/restaurants" icon={<Building2 className="h-4 w-4" />}>
+              分店
             </NavLink>
-            <NavLink href="/admin/payouts" icon={<Wallet className="h-4 w-4" />}>
-              折發結算
-            </NavLink>
-            <NavLink href="/admin/offices" icon={<Building2 className="h-4 w-4" />}>
-              辦公地點
-            </NavLink>
-            <NavLink href="/admin/attendance" icon={<Clock className="h-4 w-4" />}>
-              出勤
-            </NavLink>
-            <NavLink href="/admin/payroll" icon={<Receipt className="h-4 w-4" />}>
-              薪資
-            </NavLink>
-            <NavLink href="/admin/schedule" icon={<CalendarCheck className="h-4 w-4" />}>
-              班表
-            </NavLink>
-            <NavLink href="/announcements" icon={<Megaphone className="h-4 w-4" />}>
-              公告
-            </NavLink>
-            <NavLink href="/admin/export" icon={<Download className="h-4 w-4" />}>
-              匯出
+            <NavLink href="/admin/attendance" icon={<ClipboardList className="h-4 w-4" />}>
+              出勤總覽
             </NavLink>
           </nav>
           <div className="flex-1" />
@@ -53,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
           >
             <ArrowLeft className="h-4 w-4" />
-            返回主站
+            回餐廳
           </Link>
         </div>
       </div>

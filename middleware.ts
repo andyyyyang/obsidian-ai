@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // 真正的身分驗證仍在 server component / API route 內進行
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const hasSession = req.cookies.has("leave_session");
+  const hasSession = req.cookies.has("restaurant_session");
 
   const isPublic =
     pathname === "/login" ||

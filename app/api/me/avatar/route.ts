@@ -11,9 +11,9 @@ const schema = z.object({
   pantsColor: z.number().int().min(0).max(15),
   shoeColor: z.number().int().min(0).max(7),
   eyeStyle: z.number().int().min(0).max(5),
-  hat: z.enum(["cap", "wizard", "santa", "crown"]).nullable(),
+  hat: z.enum(["cap", "wizard", "santa", "crown", "chef", "waiter"]).nullable(),
   glasses: z.enum(["round", "square", "sunglasses"]).nullable(),
-  backpack: z.boolean(),
+  apron: z.boolean(),
   statusMessage: z.string().max(60).nullable().optional(),
 });
 

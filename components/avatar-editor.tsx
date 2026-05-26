@@ -19,6 +19,8 @@ const HAIR_STYLE_LABELS = ["短髮", "長髮", "雙馬尾", "龐克", "中分"];
 const EYE_LABELS = ["普通", "笑眼", "眨眼"];
 const HATS = [
   { value: null, label: "無" },
+  { value: "chef", label: "廚師帽" },
+  { value: "waiter", label: "外場帽" },
   { value: "cap", label: "棒球帽" },
   { value: "wizard", label: "巫師帽" },
   { value: "santa", label: "聖誕帽" },
@@ -60,7 +62,7 @@ export function AvatarEditor({
       eyeStyle: Math.floor(Math.random() * EYE_LABELS.length),
       hat: HATS[Math.floor(Math.random() * HATS.length)].value,
       glasses: GLASSES[Math.floor(Math.random() * GLASSES.length)].value,
-      backpack: Math.random() < 0.4,
+      apron: Math.random() < 0.7,
     });
   }
 
@@ -182,14 +184,14 @@ export function AvatarEditor({
           />
         </Section>
 
-        <Section label="背包">
+        <Section label="圍裙">
           <OptionRow
             options={[
               { value: false, label: "無" },
-              { value: true, label: "有" },
+              { value: true, label: "穿上" },
             ]}
-            value={look.backpack}
-            onChange={(v) => update("backpack", v)}
+            value={look.apron}
+            onChange={(v) => update("apron", v)}
           />
         </Section>
       </div>

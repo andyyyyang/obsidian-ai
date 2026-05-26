@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "員工特休系統",
-  description: "Employee leave management system",
+  title: "餐廳員工打卡 — Maple Diner",
+  description: "楓之谷風像素餐廳打卡系統",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

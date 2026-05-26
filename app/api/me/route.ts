@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { getBalance } from "@/lib/balance";
 
 export async function GET() {
   const session = await getSession();
@@ -17,10 +16,8 @@ export async function GET() {
       email: true,
       name: true,
       role: true,
-      department: true,
       jobTitle: true,
       hireDate: true,
-      manager: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -28,7 +25,5 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const balance = await getBalance(user.id);
-
-  return NextResponse.json({ user, balance });
+  return NextResponse.json({ user });
 }

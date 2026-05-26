@@ -1,7 +1,9 @@
-// Prisma schema for 員工特休管理系統
+// 餐廳員工打卡系統 — Prisma schema
 //
-// 雲端正式環境用 PostgreSQL（Vercel Postgres / Neon / Supabase 皆可）
-// DATABASE_URL 在 .env / Vercel 環境變數設定
+// 已從特休/薪資/公告系統獨立，只保留：
+//   - 員工帳號 (User + AvatarConfig)
+//   - 餐廳地點 (Restaurant)
+//   - 打卡紀錄 (Attendance)
 
 generator client {
   provider = "prisma-client-js"
@@ -16,544 +18,107 @@ datasource db {
 // 員工
 // ─────────────────────────────────────────────────────────────
 model User {
-  id            String   @id @default(cuid())
-  employeeNo    String   @unique             // 員工編號（HR 配發）
-  email         String   @unique
-  passwordHash  String
-  name          String                       // 顯示用姓名（中文）
-  role          Role     @default(EMPLOYEE)
-  hireDate      DateTime
-  department    String?                      // 部門
-  jobTitle      String?                      // 職稱
-  employmentType EmploymentType @default(FULL_TIME)
-  active        Boolean  @default(true)
-  annualLeaveEnabled Boolean @default(true)   // 是否享有特休（非正職預設關閉，HR 可手動勾選開啟）
+  id           String   @id @default(cuid())
+  employeeNo   String   @unique
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(EMPLOYEE)
+  jobTitle     String?              // 廚師、外場、吧台、店長…
+  hireDate     DateTime @default(now())
+  active       Boolean  @default(true)
 
-  // 直屬主管（自關聯）
-  managerId     String?
-  manager       User?    @relation("ManagerSubordinates", fields: [managerId], references: [id])
-  subordinates  User[]   @relation("ManagerSubordinates")
+  attendances  Attendance[]
+  avatarConfig AvatarConfig?
 
-  // 員工手冊（1:1）
-  profile       EmployeeProfile?
-
-  // 反向關聯
-  leaveRequests       LeaveRequest[] @relation("Requester")
-  approvedRequests    LeaveRequest[] @relation("Approver")
-  balanceAdjustments  BalanceAdjustment[]
-  payouts             LeavePayout[]
-  auditLogs           AuditLog[]
-  employmentPeriods   EmploymentPeriod[]
-
-  // 出勤 / 薪資模組
-  attendances           Attendance[]         @relation("UserAttendances")
-  scheduleAssignments   UserSchedule[]       @relation("UserScheduleAssignments")
-  salaryConfigs         SalaryConfig[]       @relation("UserSalaryConfigs")
-  payrolls              Payroll[]            @relation("UserPayrolls")
-  correctionRequests    AttendanceCorrection[] @relation("CorrectionRequester")
-  reviewedCorrections   AttendanceCorrection[] @relation("CorrectionReviewer")
-  avatarConfig          AvatarConfig?
-
-  // 聊天 / 公告 / 班表
-  chatMessages          ChatMessage[]        @relation("ChatAuthor")
-  announcements         Announcement[]       @relation("AnnouncementAuthor")
-  shiftAssignments      ShiftAssignment[]    @relation("ShiftAssignee")
-  publishedShifts       ShiftAssignment[]    @relation("ShiftPublisher")
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([managerId])
-}
-
-// ─────────────────────────────────────────────────────────────
-// 工作經歷段（混合制資歷）
-// 例：工讀 2022-06-01 ~ 2023-01-31，再正職 2023-02-01 ~ 至今
-// hireDate 仍為「特休年資基準日」，HR 可依此模型試算後手動回填。
-// ─────────────────────────────────────────────────────────────
-model EmploymentPeriod {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  type                  EmploymentType
-  startDate             DateTime
-  endDate               DateTime?         // null = 至今
-  countsTowardSeniority Boolean  @default(true)  // 是否計入特休年資
-  note                  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId, startDate])
-}
-
-enum EmploymentType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-  INTERN
-}
-
-// ─────────────────────────────────────────────────────────────
-// 員工手冊（個人資料）
-// 與 User 分表以便 (a) 嚴格控管敏感欄位讀取  (b) 之後新增欄位不影響 auth flow
-// ─────────────────────────────────────────────────────────────
-model EmployeeProfile {
-  id          String  @id @default(cuid())
-  userId      String  @unique
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // 基本資料
-  chineseName    String?
-  englishName    String?
-  birthDate      DateTime?
-  gender         Gender?
-  maritalStatus  MaritalStatus?
-
-  // 聯絡資訊（員工可自行編輯）
-  phone          String?
-  mobile         String?
-  registeredAddress String?  // 戶籍地址
-  mailingAddress    String?  // 通訊地址
-
-  // 緊急聯絡人（員工可自行編輯）
-  emergencyContactName     String?
-  emergencyContactRelation String?
-  emergencyContactPhone    String?
-
-  // 敏感資料：AES-256-GCM 加密儲存，僅 admin 可讀寫
-  nationalIdEncrypted   String?  // 身分證字號（加密）
-  bankName              String?
-  bankAccountEncrypted  String?  // 薪轉帳戶（加密）
-
-  updatedAt     DateTime @updatedAt
-}
-
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
-  PREFER_NOT_TO_SAY
-}
-
-enum MaritalStatus {
-  SINGLE
-  MARRIED
-  DIVORCED
-  WIDOWED
-  PREFER_NOT_TO_SAY
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 enum Role {
   EMPLOYEE
-  MANAGER
+  MANAGER   // 店長
   ADMIN
 }
 
 // ─────────────────────────────────────────────────────────────
-// 特休申請
-// 一張申請對應一段連續日期；半天透過 isHalfDay + halfDayPeriod 標記
+// 員工角色外觀（楓之谷風 chibi 紙娃娃）
 // ─────────────────────────────────────────────────────────────
-model LeaveRequest {
-  id              String        @id @default(cuid())
+model AvatarConfig {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  requesterId     String
-  requester       User          @relation("Requester", fields: [requesterId], references: [id])
+  skinTone      Int     @default(0)
+  hairStyle     Int     @default(0)
+  hairColor     Int     @default(0)
+  shirtColor    Int     @default(0)
+  pantsColor    Int     @default(0)
+  shoeColor     Int     @default(0)
+  eyeStyle      Int     @default(0)
 
-  startDate       DateTime      // 起始日（00:00）
-  endDate         DateTime      // 結束日（含當日）
-  days            Float         // 實際天數，支援 0.5
-  isHalfDay       Boolean       @default(false)
-  halfDayPeriod   HalfDayPeriod?  // AM / PM，僅當 isHalfDay = true
-  reason          String
+  hat           String?              // cap / wizard / santa / crown / chef / waiter
+  glasses       String?              // round / square / sunglasses
+  apron         Boolean @default(false)
 
-  status          LeaveStatus   @default(PENDING)
-
-  approverId      String?
-  approver        User?         @relation("Approver", fields: [approverId], references: [id])
-  decidedAt       DateTime?
-  decisionNote    String?       // 退回原因 / 核准備註
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@index([requesterId, status])
-  @@index([startDate, endDate])
-}
-
-enum LeaveStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  CANCELLED
-}
-
-enum HalfDayPeriod {
-  AM
-  PM
-}
-
-// ─────────────────────────────────────────────────────────────
-// 餘額手動調整（admin 用，例如「補發 2 天」）
-// 採到職週年日制：用 anniversaryYearStart 標示適用週年度
-// 當年度餘額 = 法定應有 + Σ(adjustments) − Σ(已核准天數)
-// ─────────────────────────────────────────────────────────────
-model BalanceAdjustment {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id])
-  anniversaryYearStart DateTime // 該週年度起始日（即某次到職週年日）
-  days                 Float    // 可為負值
-  reason               String
-  createdBy            String   // admin user id
-  createdAt            DateTime @default(now())
-
-  @@index([userId, anniversaryYearStart])
-}
-
-// ─────────────────────────────────────────────────────────────
-// 折發工資紀錄
-// 員工週年日結算時，HR 將未休完天數折發成工資
-// 寫入後該年度餘額視同清空
-// ─────────────────────────────────────────────────────────────
-model LeavePayout {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id])
-  anniversaryYearStart DateTime // 被結算的週年度起始日
-  anniversaryYearEnd   DateTime // 結算日（下一個週年日前一天）
-  unusedDays           Float    // 結算當下未休完的天數
-  payoutAmount         Float?   // 折發金額（HR 填，可選）
-  note                 String?
-  processedBy          String   // admin user id
-  processedAt          DateTime @default(now())
-
-  @@unique([userId, anniversaryYearStart])
-  @@index([userId])
-}
-
-// ─────────────────────────────────────────────────────────────
-// 稽核紀錄
-// ─────────────────────────────────────────────────────────────
-model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String
-  actor      User     @relation(fields: [actorId], references: [id])
-  action     String   // e.g. "LEAVE_APPROVED", "USER_CREATED"
-  targetType String   // e.g. "LeaveRequest", "User"
-  targetId   String
-  metadata   String?  // JSON-encoded payload
-  createdAt  DateTime @default(now())
-
-  @@index([targetType, targetId])
-  @@index([actorId, createdAt])
-}
-
-// ─────────────────────────────────────────────────────────────
-// Auth.js session 表（採用 database strategy 時需要）
-// 若用 JWT strategy 可省略
-// ─────────────────────────────────────────────────────────────
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  @@index([userId])
-}
-
-// ═════════════════════════════════════════════════════════════
-// 出勤打卡 / 薪資模組
-// ═════════════════════════════════════════════════════════════
-
-// 辦公地點（公司 / 分店）
-// 用於 GPS + IP 雙驗證打卡：員工只能在此範圍內打卡
-model Office {
-  id            String   @id @default(cuid())
-  name          String                          // 例：台北總部
-  address       String?
-  latitude      Float?                          // GPS 座標
-  longitude     Float?
-  radiusMeters  Int      @default(200)          // 允許打卡半徑（公尺）
-  ipWhitelist   String?                         // 允許 IP（CSV 格式，例 "203.0.113.1,203.0.113.2"）
-  timezone      String   @default("Asia/Taipei")
-  active        Boolean  @default(true)
-
-  schedules     WorkSchedule[]
-  attendances   Attendance[]
+  statusMessage String? @db.VarChar(60)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
-// 班別設定
-// startTime / endTime 用 "HH:mm" 字串儲存（避免時區地雷）
-// workDays 用 bitfield：bit0=週日, bit1=週一...bit6=週六；例週一~五 = 0b0111110 = 62
-model WorkSchedule {
-  id            String   @id @default(cuid())
-  name          String                          // 例：標準班 9-18
-  startTime     String                          // "09:00"
-  endTime       String                          // "18:00"
-  breakMinutes  Int      @default(60)           // 午休扣除分鐘
-  workDays      Int      @default(62)           // bitfield, 預設週一~五
-  lateGraceMinutes Int   @default(0)            // 遲到寬限分鐘數
+// ─────────────────────────────────────────────────────────────
+// 餐廳分店
+// 一個帳號可以服務多間分店；員工只能在分店允許範圍內打卡
+// ─────────────────────────────────────────────────────────────
+model Restaurant {
+  id           String  @id @default(cuid())
+  name         String                       // 例：忠孝店、信義店
+  address      String?
+  latitude     Float?                       // GPS 中心
+  longitude    Float?
+  radiusMeters Int     @default(200)        // 允許打卡半徑
+  ipWhitelist  String?                      // IP 白名單 CSV
+  timezone     String  @default("Asia/Taipei")
+  active       Boolean @default(true)
 
-  officeId      String?
-  office        Office?  @relation(fields: [officeId], references: [id])
+  attendances  Attendance[]
 
-  assignments   UserSchedule[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-// 員工 ↔ 班別（含生效區間，支援調班歷史）
-model UserSchedule {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation("UserScheduleAssignments", fields: [userId], references: [id], onDelete: Cascade)
-  scheduleId    String
-  schedule      WorkSchedule @relation(fields: [scheduleId], references: [id])
-  effectiveFrom DateTime
-  effectiveTo   DateTime?                       // null = 至今
-
-  createdAt     DateTime @default(now())
-
-  @@index([userId, effectiveFrom])
-}
-
-// 薪資設定（每員工一筆生效紀錄，調薪時新增）
-model SalaryConfig {
-  id                      String     @id @default(cuid())
-  userId                  String
-  user                    User       @relation("UserSalaryConfigs", fields: [userId], references: [id], onDelete: Cascade)
-
-  type                    SalaryType                  // MONTHLY / HOURLY / DAILY
-  amount                  Float                       // 月薪金額 / 時薪 / 日薪
-  effectiveFrom           DateTime
-  effectiveTo             DateTime?                   // null = 至今
-
-  // 出勤相關
-  fullAttendanceBonus     Float      @default(0)      // 全勤獎金（無遲到/缺勤/請假）
-  lateDeductionPerMinute  Float      @default(0)      // 遲到每分鐘扣款
-  leaveDeductPerDay       Float?                      // 請假每日扣款（null = 月薪 / 應出勤天數）
-
-  // 法定扣繳（HR 自輸入，台灣勞健保級距）
-  laborInsurance          Float      @default(0)      // 勞保自負額（月）
-  healthInsurance         Float      @default(0)      // 健保自負額（月）
-  laborPensionSelf        Float      @default(0)      // 勞退自願提撥（月）
-
-  createdAt               DateTime   @default(now())
-  updatedAt               DateTime   @updatedAt
-
-  @@index([userId, effectiveFrom])
-}
-
-enum SalaryType {
-  MONTHLY
-  HOURLY
-  DAILY
-}
-
-// 打卡紀錄（核心表）
-// 每次打卡一筆，type 區分上下班與外出
+// ─────────────────────────────────────────────────────────────
+// 打卡紀錄
+// ─────────────────────────────────────────────────────────────
 model Attendance {
-  id              String     @id @default(cuid())
-  userId          String
-  user            User       @relation("UserAttendances", fields: [userId], references: [id])
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type            PunchType
-  punchedAt       DateTime                              // 一律 server time
+  type          PunchType
+  punchedAt     DateTime                              // 一律 server time
 
-  officeId        String?
-  office          Office?    @relation(fields: [officeId], references: [id])
+  restaurantId  String?
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
 
-  // 位置驗證（記錄當下的客戶端資訊以供稽核）
-  latitude        Float?
-  longitude       Float?
-  ipAddress       String?
-  userAgent       String?    @db.Text
-  locationValid   Boolean    @default(true)            // GPS / IP 驗證結果
+  latitude      Float?
+  longitude     Float?
+  ipAddress     String?
+  userAgent     String?    @db.Text
+  locationValid Boolean    @default(true)
 
-  // 補打卡
-  isManualEntry   Boolean    @default(false)
-  approvedById    String?
-  note            String?
+  note          String?
 
-  createdAt       DateTime   @default(now())
+  createdAt     DateTime   @default(now())
 
   @@index([userId, punchedAt])
   @@index([punchedAt])
 }
 
 enum PunchType {
-  CLOCK_IN          // 上班
-  CLOCK_OUT         // 下班
-  BREAK_OUT         // 外出
-  BREAK_IN          // 回來
-}
-
-// 補打卡申請
-model AttendanceCorrection {
-  id            String           @id @default(cuid())
-  userId        String
-  user          User             @relation("CorrectionRequester", fields: [userId], references: [id])
-
-  targetDate    DateTime                                 // 補登的日期
-  type          PunchType
-  proposedTime  DateTime                                 // 補登的時間
-  reason        String
-
-  status        CorrectionStatus @default(PENDING)
-  reviewedById  String?
-  reviewedBy    User?            @relation("CorrectionReviewer", fields: [reviewedById], references: [id])
-  reviewedAt    DateTime?
-  reviewNote    String?
-
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  @@index([userId, targetDate])
-  @@index([status])
-}
-
-enum CorrectionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// 月份薪資結算（snapshot - 可重新生成覆寫）
-model Payroll {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation("UserPayrolls", fields: [userId], references: [id])
-
-  year            Int
-  month           Int                                    // 1-12
-
-  // 出勤統計
-  expectedDays    Int                                    // 應出勤天數
-  actualDays      Int                                    // 實際出勤天數
-  absentDays      Int                                    // 缺勤天數（沒打卡也沒請假）
-  leaveDays       Float                                  // 請假天數
-  totalMinutes    Int                                    // 總工時（扣午休後）
-  lateMinutes     Int                                    // 遲到分鐘
-  earlyLeaveMinutes Int                                  // 早退分鐘
-  overtimeMinutes Int                                    // 加班分鐘（僅記錄，不自動計薪）
-
-  // 薪資項目（正向）
-  baseSalary      Float                                  // 本薪
-  overtimePay     Float    @default(0)                   // 加班費（HR 手動填）
-  fullAttendanceBonus Float @default(0)                  // 全勤獎金
-  otherBonus      Float    @default(0)                   // 其他獎金
-
-  // 扣款項目（負向）
-  lateDeduction   Float    @default(0)
-  leaveDeduction  Float    @default(0)
-  laborInsurance  Float    @default(0)                   // 勞保
-  healthInsurance Float    @default(0)                   // 健保
-  laborPensionSelf Float   @default(0)                   // 勞退自提
-  incomeTax       Float    @default(0)                   // 所得稅（HR 自填）
-  otherDeduction  Float    @default(0)
-
-  netPay          Float                                  // 實領金額
-  note            String?
-
-  generatedAt     DateTime @default(now())
-  generatedBy     String                                 // admin user id
-
-  @@unique([userId, year, month])
-  @@index([year, month])
-}
-
-// ═════════════════════════════════════════════════════════════
-// 像素辦公室 / 角色外觀
-// ═════════════════════════════════════════════════════════════
-
-// 員工的像素角色外觀設定（楓之谷風 chibi）
-model AvatarConfig {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // 外觀
-  skinTone        Int      @default(0)        // 0-3
-  hairStyle       Int      @default(0)        // 0-4
-  hairColor       Int      @default(0)        // 0-7
-  shirtColor      Int      @default(0)        // 0-7
-  pantsColor      Int      @default(0)        // 0-7
-  shoeColor       Int      @default(0)        // 0-3
-  eyeStyle        Int      @default(0)        // 0-2
-
-  // 配件（null = 無）
-  hat             String?                     // "cap" | "wizard" | "santa" | "crown"
-  glasses         String?                     // "round" | "square" | "sunglasses"
-  backpack        Boolean  @default(false)
-
-  // 個人標語
-  statusMessage   String?  @db.VarChar(60)    // 頭上的氣泡話
-
-  // 辦公室位置（員工可設定自己的固定工位 x,y；隨機分配若 null）
-  deskX           Int?
-  deskY           Int?
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-// ═════════════════════════════════════════════════════════════
-// 公共聊天 / 公告 / 班表
-// ═════════════════════════════════════════════════════════════
-
-// 公共聊天室訊息
-model ChatMessage {
-  id        String   @id @default(cuid())
-  authorId  String
-  author    User     @relation("ChatAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  @@index([createdAt])
-}
-
-// 公告 / 主管宣布事項
-model Announcement {
-  id          String   @id @default(cuid())
-  authorId    String
-  author      User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
-  title       String   @db.VarChar(120)
-  content     String   @db.Text
-  pinned      Boolean  @default(false)        // 是否置頂
-  publishedAt DateTime @default(now())        // 主管想顯示的日期 (預設 = 建立日)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([publishedAt])
-  @@index([pinned, publishedAt])
-}
-
-// 班表指派（每員工每日）
-// 主管批次建立後一鍵發佈；員工只看到 publishedAt != null 的
-model ShiftAssignment {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation("ShiftAssignee", fields: [userId], references: [id], onDelete: Cascade)
-
-  date          DateTime                                // 台北日曆日 00:00 UTC+8
-  startTime     String?                                 // "HH:mm"，null = 該日休假
-  endTime       String?
-  note          String?  @db.VarChar(120)
-
-  publishedById String?
-  publishedBy   User?    @relation("ShiftPublisher", fields: [publishedById], references: [id])
-  publishedAt   DateTime?                               // null = 草稿 (員工看不到)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([userId, date])
-  @@index([date])
-  @@index([userId, date])
+  CLOCK_IN     // 上班
+  CLOCK_OUT    // 下班
+  BREAK_OUT    // 休息（外出）
+  BREAK_IN     // 結束休息
 }

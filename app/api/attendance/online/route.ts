@@ -37,7 +37,7 @@ export async function GET() {
     });
   }
 
-  // 還沒打下班的就是「在辦公室」
+  // 還沒打下班的就是「在餐廳上班中」
   const online = Array.from(stateByUser.entries())
     .filter(([_, s]) => s.last !== "CLOCK_OUT")
     .map(([userId, s]) => ({
@@ -49,7 +49,7 @@ export async function GET() {
       statusMessage: s.avatar?.statusMessage ?? null,
     }));
 
-  // 如果自己今天還沒打卡，也讓自己出現在辦公室裡（方便預覽）
+  // 如果自己今天還沒打卡，也讓自己出現在餐廳裡（方便預覽）
   if (!online.find((o) => o.isSelf)) {
     const me = await prisma.user.findUnique({
       where: { id: session.userId },

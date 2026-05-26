@@ -1,138 +1,149 @@
-import Link from "next/link";
-import { Clock, Download } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { tpeMonthRange, tpeToday } from "@/lib/tz";
-import { buildMonthlySummary, getEffectiveSchedule, rollupTotals } from "@/lib/attendance";
+import { tpeDayRange, tpeToday } from "@/lib/tz";
 import { GlassCard } from "@/components/glass-card";
+import { PageHeader } from "@/components/page-header";
 
 export const dynamic = "force-dynamic";
 
-type Search = { year?: string; month?: string };
+type SearchParams = { date?: string };
 
-export default async function AdminAttendancePage({ searchParams }: { searchParams: Promise<Search> }) {
-  const sp = await searchParams;
-  const todayStr = tpeToday();
-  const [todayY, todayM] = todayStr.split("-").map(Number);
-  const year = Number(sp.year) || todayY;
-  const month = Number(sp.month) || todayM;
-  const { start, end } = tpeMonthRange(year, month);
-  const monthMid = new Date((start.getTime() + end.getTime()) / 2);
+export default async function AdminAttendancePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const { date } = await searchParams;
+  const targetDate = date ?? tpeToday();
+  const { start, end } = tpeDayRange(targetDate);
 
-  const users = await prisma.user.findMany({
-    where: { active: true },
-    orderBy: [{ department: "asc" }, { employeeNo: "asc" }],
-    select: { id: true, name: true, employeeNo: true, department: true },
+  const [users, punches] = await Promise.all([
+    prisma.user.findMany({
+      where: { active: true },
+      orderBy: { employeeNo: "asc" },
+      select: { id: true, name: true, employeeNo: true, jobTitle: true },
+    }),
+    prisma.attendance.findMany({
+      where: { punchedAt: { gte: start, lt: end } },
+      orderBy: { punchedAt: "asc" },
+      include: { restaurant: { select: { name: true } } },
+    }),
+  ]);
+
+  const punchesByUser = new Map<string, typeof punches>();
+  for (const p of punches) {
+    const arr = punchesByUser.get(p.userId) ?? [];
+    arr.push(p);
+    punchesByUser.set(p.userId, arr);
+  }
+
+  const rows = users.map((u) => {
+    const list = punchesByUser.get(u.id) ?? [];
+    const clockIn = list.find((p) => p.type === "CLOCK_IN");
+    const clockOut = [...list].reverse().find((p) => p.type === "CLOCK_OUT");
+    const last = list[list.length - 1];
+    const status: "in" | "break" | "off" | "absent" = clockOut
+      ? "off"
+      : last?.type === "BREAK_OUT"
+        ? "break"
+        : clockIn
+          ? "in"
+          : "absent";
+
+    let workMinutes = 0;
+    if (clockIn && clockOut) {
+      let breakMs = 0;
+      let breakStart: Date | undefined;
+      for (const p of list) {
+        if (p.type === "BREAK_OUT") breakStart = p.punchedAt;
+        if (p.type === "BREAK_IN" && breakStart) {
+          breakMs += p.punchedAt.getTime() - breakStart.getTime();
+          breakStart = undefined;
+        }
+      }
+      workMinutes = Math.max(0, Math.round((clockOut.punchedAt.getTime() - clockIn.punchedAt.getTime() - breakMs) / 60_000));
+    }
+
+    return { ...u, clockIn, clockOut, status, workMinutes, restaurantName: list[0]?.restaurant?.name };
   });
 
-  const rows = await Promise.all(
-    users.map(async (u) => {
-      const [schedule, punches, leaves] = await Promise.all([
-        getEffectiveSchedule(u.id, monthMid),
-        prisma.attendance.findMany({
-          where: { userId: u.id, punchedAt: { gte: start, lt: end } },
-          orderBy: { punchedAt: "asc" },
-        }),
-        prisma.leaveRequest.findMany({
-          where: {
-            requesterId: u.id,
-            status: "APPROVED",
-            startDate: { lt: end },
-            endDate: { gte: start },
-          },
-          select: { startDate: true, endDate: true, days: true, isHalfDay: true },
-        }),
-      ]);
-      const summaries = buildMonthlySummary({ year, month, schedule, punches, leaves });
-      const totals = rollupTotals(summaries);
-      return { ...u, totals };
-    }),
-  );
-
-  const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
-  const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
-
   return (
-    <main className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Clock className="h-6 w-6" />
-            員工出勤總覽
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">{year} 年 {month} 月</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`?year=${prev.y}&month=${prev.m}`} className="btn-ghost">←</Link>
-          <Link href={`?year=${next.y}&month=${next.m}`} className="btn-ghost">→</Link>
-          <a href={`/api/admin/attendance/export?year=${year}&month=${month}`} className="btn-primary">
-            <Download className="h-4 w-4" />
-            匯出 CSV
-          </a>
-        </div>
-      </div>
+    <main className="mx-auto max-w-6xl px-6 py-10">
+      <PageHeader
+        title="今日出勤總覽"
+        subtitle={targetDate}
+        action={
+          <form className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-slate-400" />
+            <input
+              type="date"
+              name="date"
+              defaultValue={targetDate}
+              className="input !w-auto"
+            />
+            <button type="submit" className="btn-ghost text-xs">查詢</button>
+          </form>
+        }
+      />
 
-      <GlassCard variant="strong" className="overflow-hidden p-0">
+      <GlassCard variant="strong" className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-3">員工</th>
-                <th className="px-3 py-3">部門</th>
-                <th className="px-3 py-3 text-right">應出勤</th>
-                <th className="px-3 py-3 text-right">實出勤</th>
-                <th className="px-3 py-3 text-right">缺勤</th>
-                <th className="px-3 py-3 text-right">請假</th>
-                <th className="px-3 py-3 text-right">遲到(分)</th>
-                <th className="px-3 py-3 text-right">總工時</th>
-                <th className="px-5 py-3"></th>
+            <thead className="bg-white/50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <Th>員編</Th>
+                <Th>姓名</Th>
+                <Th>職稱</Th>
+                <Th>上班時間</Th>
+                <Th>下班時間</Th>
+                <Th>實際工時</Th>
+                <Th>分店</Th>
+                <Th>狀態</Th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200/60">
-              {rows.map((u) => (
-                <tr key={u.id}>
-                  <td className="px-5 py-3">
-                    <div className="font-medium text-slate-900">{u.name}</div>
-                    <div className="text-xs text-slate-500">{u.employeeNo}</div>
-                  </td>
-                  <td className="px-3 py-3 text-slate-600">{u.department ?? "—"}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{u.totals.expectedDays}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{u.totals.actualDays}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">
-                    {u.totals.absentDays > 0 ? (
-                      <span className="text-rose-600">{u.totals.absentDays}</span>
-                    ) : (
-                      u.totals.absentDays
-                    )}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums">{u.totals.leaveDays}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">
-                    {u.totals.lateMinutes > 0 ? (
-                      <span className="text-rose-600">{u.totals.lateMinutes}</span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums">
-                    {(u.totals.totalMinutes / 60).toFixed(1)} h
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <Link href={`/admin/attendance/${u.id}?year=${year}&month=${month}`} className="text-sm text-blue-600 hover:underline">
-                      明細
-                    </Link>
-                  </td>
+            <tbody className="divide-y divide-white/40">
+              {rows.map((r) => (
+                <tr key={r.id} className="transition-colors hover:bg-white/40">
+                  <Td>{r.employeeNo}</Td>
+                  <Td>{r.name}</Td>
+                  <Td className="text-xs text-slate-500">{r.jobTitle ?? "—"}</Td>
+                  <Td className="tabular-nums">{r.clockIn ? fmt(r.clockIn.punchedAt) : "—"}</Td>
+                  <Td className="tabular-nums">{r.clockOut ? fmt(r.clockOut.punchedAt) : "—"}</Td>
+                  <Td className="tabular-nums">
+                    {r.workMinutes ? `${Math.floor(r.workMinutes / 60)}h ${(r.workMinutes % 60).toString().padStart(2, "0")}m` : "—"}
+                  </Td>
+                  <Td className="text-xs">{r.restaurantName ?? "—"}</Td>
+                  <Td>
+                    <StatusBadge status={r.status} />
+                  </Td>
                 </tr>
               ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-5 py-12 text-center text-sm text-slate-400">
-                    沒有員工資料
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </GlassCard>
     </main>
   );
+}
+
+function StatusBadge({ status }: { status: "in" | "break" | "off" | "absent" }) {
+  const map = {
+    in:     { label: "在崗",  cls: "bg-emerald-100 text-emerald-700" },
+    break:  { label: "休息中", cls: "bg-amber-100 text-amber-700" },
+    off:    { label: "下班",  cls: "bg-slate-100 text-slate-600" },
+    absent: { label: "未打卡", cls: "bg-rose-100 text-rose-700" },
+  };
+  const { label, cls } = map[status];
+  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+}
+
+function fmt(d: Date): string {
+  return new Date(d).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Taipei" });
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return <th className="px-4 py-3 font-medium">{children}</th>;
+}
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-4 py-3.5 ${className}`}>{children}</td>;
 }

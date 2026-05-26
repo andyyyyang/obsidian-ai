@@ -10,7 +10,7 @@ export type SessionData = {
 
 const sessionOptions: SessionOptions = {
   password: process.env.SESSION_SECRET as string,
-  cookieName: "leave_session",
+  cookieName: "restaurant_session",
   cookieOptions: {
     httpOnly: true,
     sameSite: "lax",

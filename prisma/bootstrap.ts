@@ -1,14 +1,12 @@
 /**
- * 首次部署自動建立 HR 管理員帳號
+ * 首次部署自動建立第一位 admin 帳號 + 一間範例餐廳。
  *
  * 行為：
  *   - 若資料庫內已有任何 User，跳過（不會洗掉現有資料）
- *   - 否則用 INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD / INITIAL_ADMIN_NAME 建立第一位 admin
- *
- * 在 Vercel build 時會自動執行（見 package.json 的 build script）
+ *   - 否則使用 INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD / INITIAL_ADMIN_NAME 建立
  */
 
-import { PrismaClient, EmploymentType, Role } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -22,12 +20,12 @@ async function main() {
 
   const email = process.env.INITIAL_ADMIN_EMAIL;
   const password = process.env.INITIAL_ADMIN_PASSWORD;
-  const name = process.env.INITIAL_ADMIN_NAME ?? "HR Admin";
+  const name = process.env.INITIAL_ADMIN_NAME ?? "店長";
 
   if (!email || !password) {
     console.warn(
       "[bootstrap] 找不到 INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD，跳過。\n" +
-        "          首次部署請在環境變數內設定這兩個值，重新部署後會自動建立首位 admin。",
+        "          首次部署請在環境變數內設定這兩個值。",
     );
     return;
   }
@@ -37,25 +35,30 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const today = new Date();
 
-  await prisma.user.create({
-    data: {
-      employeeNo: "HR001",
-      email,
-      name,
-      passwordHash,
-      role: Role.ADMIN,
-      hireDate: today,
-      department: "人力資源部",
-      jobTitle: "HR Admin",
-      employmentType: EmploymentType.FULL_TIME,
-      profile: { create: { chineseName: name } },
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.user.create({
+      data: {
+        employeeNo: "M001",
+        email,
+        name,
+        passwordHash,
+        role: Role.ADMIN,
+        jobTitle: "店長",
+      },
+    });
+    await tx.restaurant.create({
+      data: {
+        name: "本店",
+        address: "請至後台設定地址",
+        radiusMeters: 200,
+      },
+    });
   });
 
-  console.log(`[bootstrap] ✓ 已建立首位管理員：${email}`);
-  console.log(`[bootstrap]   登入後請立刻在 HR 後台修改密碼或新增其他 admin 帳號。`);
+  console.log(`[bootstrap] ✓ 已建立首位管理員：${email}（員編 M001）`);
+  console.log(`[bootstrap] ✓ 已建立範例餐廳：本店`);
+  console.log(`[bootstrap]   登入後請至 /admin 修改密碼、新增餐廳座標與員工。`);
 }
 
 main()

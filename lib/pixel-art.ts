@@ -258,6 +258,26 @@ const HATS: Record<string, string> = {
 .................
 .................
 `,
+  chef: `
+....##WWWW##....
+...#WWWWWWWW#...
+..#WWWWWWWWWW#..
+..#WWWWWWWWWW#..
+..#WWWWWWWWWW#..
+...##WWWWWW##...
+....########....
+.................
+`,
+  waiter: `
+.................
+....########....
+...#WWWWWWWW#...
+...#W#####W#....
+..#WW#####WW#...
+..############..
+.....######.....
+.................
+`,
 };
 
 const GLASSES: Record<string, string> = {
@@ -332,7 +352,7 @@ export type AvatarLook = {
   eyeStyle: number;
   hat: string | null;
   glasses: string | null;
-  backpack: boolean;
+  apron: boolean;
 };
 
 export const DEFAULT_LOOK: AvatarLook = {
@@ -345,7 +365,7 @@ export const DEFAULT_LOOK: AvatarLook = {
   eyeStyle: 0,
   hat: null,
   glasses: null,
-  backpack: false,
+  apron: false,
 };
 
 function buildPalette(look: AvatarLook): Record<string, string> {
@@ -426,17 +446,53 @@ export function drawAvatar(
     drawSpriteRaw(ctx, SPR_HATS[look.hat], palette, x, y - 2 * scale, scale);
   }
 
-  // 5. 背包 (背後)
-  if (look.backpack) {
-    const bx = x + 3 * scale;
-    const by = y + 13 * scale;
-    ctx.fillStyle = "#8b3a1a";
-    ctx.fillRect(bx, by, 4 * scale, 8 * scale);
-    ctx.fillStyle = "#5d2510";
-    ctx.fillRect(bx, by + 6 * scale, 4 * scale, 2 * scale);
+  // 5. 圍裙（餐廳工作服）
+  if (look.apron) {
+    drawApron(ctx, x, y, scale);
   }
 
   ctx.restore();
+}
+
+function drawApron(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  scale: number,
+) {
+  // 白色圍裙：覆蓋胸前 + 腰部 + 裙擺
+  const apronColor = "#f8f4ec";
+  const apronShadow = "#dcd2bd";
+  const strap = "#8b5a2b";
+  // 頸後吊帶
+  ctx.fillStyle = strap;
+  ctx.fillRect(x + 6 * scale, y + 11 * scale, scale, 2 * scale);
+  ctx.fillRect(x + 9 * scale, y + 11 * scale, scale, 2 * scale);
+  // 胸前布料 (上衣中央)
+  ctx.fillStyle = "#1a1410";
+  ctx.fillRect(x + 5 * scale, y + 12 * scale, 6 * scale, scale);
+  ctx.fillStyle = apronColor;
+  ctx.fillRect(x + 5 * scale, y + 13 * scale, 6 * scale, 6 * scale);
+  ctx.fillStyle = apronShadow;
+  ctx.fillRect(x + 5 * scale, y + 18 * scale, 6 * scale, scale);
+  // 腰繩
+  ctx.fillStyle = strap;
+  ctx.fillRect(x + 3 * scale, y + 19 * scale, 10 * scale, scale);
+  // 裙擺
+  ctx.fillStyle = "#1a1410";
+  ctx.fillRect(x + 3 * scale, y + 20 * scale, scale, 5 * scale);
+  ctx.fillRect(x + 12 * scale, y + 20 * scale, scale, 5 * scale);
+  ctx.fillStyle = apronColor;
+  ctx.fillRect(x + 4 * scale, y + 20 * scale, 8 * scale, 5 * scale);
+  ctx.fillStyle = apronShadow;
+  ctx.fillRect(x + 4 * scale, y + 24 * scale, 8 * scale, scale);
+  ctx.fillStyle = "#1a1410";
+  ctx.fillRect(x + 4 * scale, y + 25 * scale, 8 * scale, scale);
+  // 口袋
+  ctx.fillStyle = apronShadow;
+  ctx.fillRect(x + 6 * scale, y + 21 * scale, 4 * scale, 2 * scale);
+  ctx.fillStyle = "#1a1410";
+  ctx.fillRect(x + 6 * scale, y + 23 * scale, 4 * scale, scale);
 }
 
 function drawSpriteRaw(

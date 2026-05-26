@@ -13,11 +13,11 @@ export function configToLook(config: AvatarConfig | null): AvatarLook {
     eyeStyle: config.eyeStyle,
     hat: config.hat,
     glasses: config.glasses,
-    backpack: config.backpack,
+    apron: config.apron,
   };
 }
 
-/** 由員工 id 計算一個 deterministic 預設外觀（沒設定的人也能有個樣子） */
+/** 由員工 id 計算 deterministic 預設外觀（沒設定的人也能有個樣子） */
 export function deterministicLook(seed: string): AvatarLook {
   let h = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -37,6 +37,6 @@ export function deterministicLook(seed: string): AvatarLook {
     eyeStyle: r(3),
     hat: null,
     glasses: null,
-    backpack: false,
+    apron: true,    // 預設穿圍裙 — 餐廳員工嘛
   };
 }

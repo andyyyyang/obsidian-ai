@@ -5,19 +5,27 @@ import { LogIn, LogOut, Coffee, RotateCcw, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { GlassCard } from "./glass-card";
 
-type Office = { id: string; name: string; latitude: number | null; longitude: number | null };
-type Punch = { id: string; type: string; punchedAt: string; officeName?: string };
+type Restaurant = { id: string; name: string; latitude: number | null; longitude: number | null };
+type Punch = { id: string; type: string; punchedAt: string; restaurantName?: string };
 
 const TYPE_LABEL: Record<string, string> = {
   CLOCK_IN: "上班",
   CLOCK_OUT: "下班",
-  BREAK_OUT: "外出",
-  BREAK_IN: "回來",
+  BREAK_OUT: "休息",
+  BREAK_IN: "回崗",
 };
 
-export function PunchCard({ offices, initialPunches }: { offices: Office[]; initialPunches: Punch[] }) {
+export function PunchCard({
+  restaurants,
+  initialPunches,
+  compact = false,
+}: {
+  restaurants: Restaurant[];
+  initialPunches: Punch[];
+  compact?: boolean;
+}) {
   const [punches, setPunches] = useState<Punch[]>(initialPunches);
-  const [officeId, setOfficeId] = useState<string>(offices[0]?.id ?? "");
+  const [restaurantId, setRestaurantId] = useState<string>(restaurants[0]?.id ?? "");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(new Date());
@@ -56,8 +64,8 @@ export function PunchCard({ offices, initialPunches }: { offices: Office[]; init
         new Date(lastByType.get("BREAK_IN")!.punchedAt));
 
   function doPunch(type: string) {
-    if (!officeId) {
-      toast.error("請先選擇辦公地點");
+    if (!restaurantId) {
+      toast.error("請先選擇分店");
       return;
     }
     startTransition(async () => {
@@ -67,7 +75,7 @@ export function PunchCard({ offices, initialPunches }: { offices: Office[]; init
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type,
-            officeId,
+            restaurantId,
             latitude: coords?.lat,
             longitude: coords?.lng,
             userAgent: navigator.userAgent,
@@ -78,11 +86,11 @@ export function PunchCard({ offices, initialPunches }: { offices: Office[]; init
           toast.error(data.error ?? "打卡失敗");
           return;
         }
-        toast.success(`${TYPE_LABEL[type]}打卡成功 ${data.distance != null ? `（距離 ${data.distance}m）` : ""}`);
+        toast.success(`${TYPE_LABEL[type]}打卡成功${data.distance != null ? `（距離 ${data.distance}m）` : ""}`);
         const refreshed = await fetch("/api/attendance/today", { cache: "no-store" });
         const refreshedJson = await refreshed.json();
         setPunches(refreshedJson.punches);
-      } catch (e) {
+      } catch {
         toast.error("網路錯誤");
       }
     });
@@ -98,37 +106,41 @@ export function PunchCard({ offices, initialPunches }: { offices: Office[]; init
     });
 
   return (
-    <GlassCard variant="strong" className="p-7">
+    <GlassCard variant="strong" className={compact ? "p-5" : "p-7"}>
       {/* 時鐘 */}
-      <div className="mb-6 text-center">
-        <div className="text-5xl font-bold tabular-nums tracking-tight text-slate-900">
+      <div className="mb-5 text-center">
+        <div className={compact ? "text-3xl font-bold tabular-nums tracking-tight text-slate-900" : "text-5xl font-bold tabular-nums tracking-tight text-slate-900"}>
           {now.toLocaleTimeString("zh-TW", { hour12: false, timeZone: "Asia/Taipei" })}
         </div>
-        <div className="mt-1 text-sm text-slate-500">
+        <div className="mt-1 text-xs text-slate-500">
           {now.toLocaleDateString("zh-TW", { dateStyle: "full", timeZone: "Asia/Taipei" })}
         </div>
       </div>
 
-      {/* 辦公地點選擇 */}
-      {offices.length > 1 && (
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-slate-500">辦公地點</label>
+      {/* 分店選擇 */}
+      {restaurants.length > 1 ? (
+        <div className="mb-3">
+          <label className="mb-1 block text-xs font-medium text-slate-500">分店</label>
           <select
-            value={officeId}
-            onChange={(e) => setOfficeId(e.target.value)}
+            value={restaurantId}
+            onChange={(e) => setRestaurantId(e.target.value)}
             className="input"
           >
-            {offices.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
+            {restaurants.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
               </option>
             ))}
           </select>
         </div>
-      )}
+      ) : restaurants.length === 1 ? (
+        <div className="mb-3 text-center text-xs text-slate-500">
+          分店：{restaurants[0].name}
+        </div>
+      ) : null}
 
       {/* 位置狀態 */}
-      <div className="mb-5 flex items-center justify-center gap-2 text-xs text-slate-500">
+      <div className="mb-4 flex items-center justify-center gap-2 text-xs text-slate-500">
         <MapPin className="h-3.5 w-3.5" />
         {coords ? (
           <span>已取得位置（{coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}）</span>
@@ -142,52 +154,52 @@ export function PunchCard({ offices, initialPunches }: { offices: Office[]; init
       {/* 打卡按鈕 */}
       <div className="grid grid-cols-2 gap-3">
         <button
-          className="btn-success py-6 text-base"
+          className="btn-success py-5 text-base"
           disabled={pending || hasClockedIn}
           onClick={() => doPunch("CLOCK_IN")}
         >
           <LogIn className="h-5 w-5" />
-          上班打卡
+          上班
         </button>
         <button
-          className="btn-primary py-6 text-base"
+          className="btn-primary py-5 text-base"
           disabled={pending || !hasClockedIn}
           onClick={() => doPunch("CLOCK_OUT")}
         >
           <LogOut className="h-5 w-5" />
-          下班打卡
+          下班
         </button>
         <button
-          className="btn-ghost py-4"
+          className="btn-ghost py-3"
           disabled={pending || !hasClockedIn || hasClockedOut || onBreak}
           onClick={() => doPunch("BREAK_OUT")}
         >
           <Coffee className="h-4 w-4" />
-          外出
+          休息
         </button>
         <button
-          className="btn-ghost py-4"
+          className="btn-ghost py-3"
           disabled={pending || !onBreak}
           onClick={() => doPunch("BREAK_IN")}
         >
           <RotateCcw className="h-4 w-4" />
-          回來
+          回崗
         </button>
       </div>
 
       {/* 今日打卡紀錄 */}
-      <div className="mt-6">
-        <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">今日紀錄</h3>
+      <div className="mt-5">
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">今日紀錄</h3>
         {punches.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">
-            今天還沒有打卡
+          <p className="rounded-2xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-400">
+            還沒打卡，今天從上班開始
           </p>
         ) : (
           <ul className="space-y-1.5">
             {punches.map((p) => (
               <li
                 key={p.id}
-                className="glass-subtle flex items-center justify-between rounded-2xl px-4 py-2.5 text-sm"
+                className="glass-subtle flex items-center justify-between rounded-2xl px-3 py-2 text-sm"
               >
                 <span className="font-medium text-slate-900">{TYPE_LABEL[p.type] ?? p.type}</span>
                 <span className="tabular-nums text-slate-600">{fmtTime(p.punchedAt)}</span>

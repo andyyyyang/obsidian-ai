@@ -1,32 +1,16 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { format } from "date-fns";
-import { BriefcaseBusiness, Calendar, CalendarCheck, ClipboardList, Clock, Gamepad2, Megaphone, MessageSquare, Plus, Receipt, Settings, Sparkles, User as UserIcon } from "lucide-react";
+import { ChefHat, ClipboardList, LogOut, Settings, Sparkles, Utensils, Users } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { getBalance } from "@/lib/balance";
-import {
-  getUpcomingAnniversaries,
-  getUpcomingBirthdays,
-  getUpcomingLeaves,
-  yearProgress,
-} from "@/lib/widgets";
-import { LogoutButton } from "./logout-button";
+import { tpeDayRange, tpeToday } from "@/lib/tz";
+import { configToLook, deterministicLook } from "@/lib/avatar";
 import { GlassCard } from "@/components/glass-card";
-import { StatusBadge } from "@/components/status-badge";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Avatar } from "@/components/avatar";
 import { AvatarPreview } from "@/components/avatar-preview";
-import { configToLook } from "@/lib/avatar";
-import { YearProgress } from "@/components/year-progress";
-import {
-  AnniversaryWidget,
-  AnnouncementWidget,
-  BirthdayWidget,
-  TodayShiftWidget,
-  UpcomingLeavesWidget,
-} from "@/components/home-widgets";
-import { tpeToday, tpeToUtc } from "@/lib/tz";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { PunchCard } from "@/components/punch-card";
+import { RestaurantView } from "./restaurant-view";
+import { LogoutButton } from "./logout-button";
 
 export const dynamic = "force-dynamic";
 
@@ -34,258 +18,177 @@ export default async function HomePage() {
   const session = await getSession();
   if (!session.userId) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      employeeNo: true,
-      role: true,
-      department: true,
-      jobTitle: true,
-      hireDate: true,
-      employmentType: true,
-      manager: { select: { name: true } },
-      avatarConfig: true,
-    },
-  });
-  if (!user) redirect("/login");
+  const { start, end } = tpeDayRange(tpeToday());
 
-  const todayStr = tpeToday();
-  const todayUtc = tpeToUtc(todayStr, "00:00");
-
-  const [balance, recentRequests, birthdays, anniversaries, upcomingLeaves, recentAnnouncements, todayShift] = await Promise.all([
-    getBalance(user.id),
-    prisma.leaveRequest.findMany({
-      where: { requesterId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: 5,
+  const [me, restaurants, todayPunches, allTodayPunches] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        name: true,
+        employeeNo: true,
+        role: true,
+        jobTitle: true,
+        avatarConfig: true,
+      },
     }),
-    getUpcomingBirthdays(14),
-    getUpcomingAnniversaries(14),
-    getUpcomingLeaves(7),
-    prisma.announcement.findMany({
-      where: { publishedAt: { lte: new Date() } },
-      orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }],
-      take: 4,
-      include: { author: { select: { name: true } } },
+    prisma.restaurant.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, latitude: true, longitude: true },
     }),
-    prisma.shiftAssignment.findFirst({
-      where: { userId: user.id, date: todayUtc, publishedAt: { not: null } },
-      select: { startTime: true, endTime: true, note: true },
+    prisma.attendance.findMany({
+      where: { userId: session.userId, punchedAt: { gte: start, lt: end } },
+      orderBy: { punchedAt: "asc" },
+      include: { restaurant: { select: { name: true } } },
+    }),
+    prisma.attendance.findMany({
+      where: { punchedAt: { gte: start, lt: end } },
+      orderBy: { punchedAt: "asc" },
+      include: { user: { select: { id: true, name: true, avatarConfig: true } } },
     }),
   ]);
 
-  const progress = balance.year ? yearProgress(balance.year.start, balance.year.end) : 0;
+  if (!me) redirect("/login");
+
+  // 聚合每位員工今日的最後狀態（在崗 / 休息 / 已下班）
+  const stateByUser = new Map<string, { last: string; name: string; avatar: any }>();
+  for (const p of allTodayPunches) {
+    stateByUser.set(p.userId, { last: p.type, name: p.user.name, avatar: p.user.avatarConfig });
+  }
+  const occupants = Array.from(stateByUser.entries())
+    .filter(([_, s]) => s.last !== "CLOCK_OUT")
+    .map(([userId, s]) => ({
+      id: userId,
+      name: s.name,
+      isSelf: userId === session.userId,
+      onBreak: s.last === "BREAK_OUT",
+      look: s.avatar ? configToLook(s.avatar) : deterministicLook(userId),
+      statusMessage: s.avatar?.statusMessage ?? null,
+    }));
+
+  // 即使還沒打卡，也讓自己出現在場景中讓使用者看到自己的角色
+  if (!occupants.find((o) => o.isSelf)) {
+    occupants.push({
+      id: me.id,
+      name: me.name,
+      isSelf: true,
+      onBreak: false,
+      look: me.avatarConfig ? configToLook(me.avatarConfig) : deterministicLook(me.id),
+      statusMessage: me.avatarConfig?.statusMessage ?? null,
+    });
+  }
+
+  const onShiftCount = Array.from(stateByUser.values()).filter((s) => s.last !== "CLOCK_OUT").length;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-10 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
+    <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+      {/* 頂部 header */}
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
           <Link href="/profile/avatar" className="group relative">
-            <div className="rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 p-2 transition group-hover:scale-105 dark:from-sky-900/40 dark:to-indigo-900/40">
-              <AvatarPreview look={configToLook(user.avatarConfig)} scale={2} />
+            <div className="rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 p-2 transition group-hover:scale-105 dark:from-amber-900/40 dark:to-rose-900/40">
+              <AvatarPreview look={configToLook(me.avatarConfig)} scale={2} />
             </div>
             <div className="absolute -bottom-1 -right-1 rounded-full bg-white p-1 shadow opacity-0 transition group-hover:opacity-100">
               <Sparkles className="h-3 w-3 text-amber-500" />
             </div>
           </Link>
           <div>
-            <p className="text-sm text-slate-500">嗨，歡迎回來</p>
-            <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-slate-900">{user.name}</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {user.department} · {user.jobTitle} · 員編 {user.employeeNo}
-              {user.manager ? ` · 主管 ${user.manager.name}` : ""}
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                {me.name}
+              </h1>
+              <span className="rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                {roleLabel(me.role)}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {me.jobTitle ?? "員工"} · 員編 {me.employeeNo}
             </p>
           </div>
         </div>
         <nav className="flex flex-wrap items-center gap-2">
-          <NavLink href="/office" icon={<Gamepad2 className="h-4 w-4" />}>
-            辦公室
-          </NavLink>
-          <NavLink href="/chat" icon={<MessageSquare className="h-4 w-4" />}>
-            聊天室
-          </NavLink>
-          <NavLink href="/announcements" icon={<Megaphone className="h-4 w-4" />}>
-            公告
-          </NavLink>
-          <NavLink href="/schedule" icon={<CalendarCheck className="h-4 w-4" />}>
-            班表
-          </NavLink>
-          <NavLink href="/profile/avatar" icon={<Sparkles className="h-4 w-4" />}>
-            角色
-          </NavLink>
-          <NavLink href="/clock" icon={<Clock className="h-4 w-4" />}>
-            打卡
-          </NavLink>
-          <NavLink href="/attendance" icon={<ClipboardList className="h-4 w-4" />}>
-            出勤
-          </NavLink>
-          <NavLink href="/payroll" icon={<Receipt className="h-4 w-4" />}>
-            薪資單
-          </NavLink>
-          <NavLink href="/calendar" icon={<Calendar className="h-4 w-4" />}>
-            行事曆
-          </NavLink>
-          {(user.role === "MANAGER" || user.role === "ADMIN") && (
-            <NavLink href="/approvals" icon={<ClipboardList className="h-4 w-4" />}>
-              待審
-            </NavLink>
+          <Link href="/profile/avatar" className="btn-ghost">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">紙娃娃</span>
+          </Link>
+          <Link href="/attendance" className="btn-ghost">
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">出勤紀錄</span>
+          </Link>
+          {(me.role === "ADMIN" || me.role === "MANAGER") && (
+            <Link href="/admin" className="btn-ghost">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">後台</span>
+            </Link>
           )}
-          {(user.role === "MANAGER" || user.role === "ADMIN") && (
-            <NavLink href="/manage" icon={<BriefcaseBusiness className="h-4 w-4" />}>
-              管理工具
-            </NavLink>
-          )}
-          {user.role === "ADMIN" && (
-            <NavLink href="/admin" icon={<Settings className="h-4 w-4" />}>
-              HR 後台
-            </NavLink>
-          )}
-          <NavLink href="/profile" icon={<UserIcon className="h-4 w-4" />}>
-            個人手冊
-          </NavLink>
           <ThemeToggle />
           <LogoutButton />
         </nav>
       </header>
 
-      <GlassCard variant="strong" className="mb-6 p-7">
-        <div className="mb-5 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">本年度特休</h2>
-          {balance.year && (
-            <span className="text-xs text-slate-500">
-              週年度 {format(balance.year.start, "yyyy-MM-dd")} ~ {format(balance.year.end, "yyyy-MM-dd")}
-            </span>
-          )}
+      {/* 餐廳店招 */}
+      <div className="mb-4 flex items-center justify-center gap-3 text-center">
+        <div className="flex items-center gap-2 rounded-full bg-white/60 px-5 py-2 shadow-glass backdrop-blur-xl">
+          <ChefHat className="h-5 w-5 text-amber-600" />
+          <span className="font-bold tracking-wide text-slate-800">楓之谷餐廳</span>
+          <span className="text-xs text-slate-500">·</span>
+          <span className="text-xs text-slate-500">
+            <Users className="mr-1 inline h-3 w-3" />
+            在崗 {onShiftCount} 位
+          </span>
         </div>
-        {!balance.annualLeaveEnabled ? (
-          <p className="text-sm text-slate-500">
-            您目前的職位（{employmentLabel(user.employmentType)}）不享有特休。
-            <br />
-            如有疑問請聯絡 HR。
-          </p>
-        ) : balance.year ? (
-          <>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <Stat label="法定天數" value={balance.entitlement} />
-              <Stat label="已核准使用" value={balance.used} />
-              <Stat label="申請中" value={balance.pending} />
-              <Stat label="尚可申請" value={balance.remaining} emphasis />
-            </div>
-            <div className="mt-6">
-              <YearProgress progress={progress} />
-            </div>
-          </>
-        ) : (
-          <p className="text-sm text-slate-500">
-            到職 {format(user.hireDate, "yyyy-MM-dd")}，尚未滿 6 個月，目前無法定特休。
-          </p>
-        )}
-      </GlassCard>
-
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <AnnouncementWidget
-          items={recentAnnouncements.map((a) => ({
-            id: a.id,
-            title: a.title,
-            authorName: a.author.name,
-            publishedAt: a.publishedAt,
-            pinned: a.pinned,
-          }))}
-        />
-        <TodayShiftWidget
-          shift={todayShift}
-          dateLabel={new Date().toLocaleDateString("zh-TW", {
-            month: "long",
-            day: "numeric",
-            weekday: "long",
-            timeZone: "Asia/Taipei",
-          })}
-        />
-        <UpcomingLeavesWidget items={upcomingLeaves} />
-        <BirthdayWidget items={birthdays} />
-        <AnniversaryWidget items={anniversaries} />
       </div>
 
-      <GlassCard variant="strong" className="p-7">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">最近的申請</h2>
-          {balance.year && (
-            <Link href="/leave/new" className="btn-primary">
-              <Plus className="h-4 w-4" />
-              新增申請
-            </Link>
+      {/* 主版面：餐廳場景 + 打卡卡片 */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+        <GlassCard variant="strong" className="overflow-hidden p-2">
+          <RestaurantView initialOccupants={occupants} />
+          <div className="mt-2 px-3 pb-1 text-center text-[11px] text-slate-500">
+            場景每 20 秒自動更新同事狀態 · 黃色箭頭是你
+          </div>
+        </GlassCard>
+
+        <div className="space-y-3">
+          {restaurants.length === 0 ? (
+            <GlassCard variant="strong" className="p-6 text-center text-sm text-amber-700">
+              尚未建立任何分店<br />
+              <Link href="/admin/restaurants" className="mt-2 inline-block text-ios-blue underline">
+                請至後台新增
+              </Link>
+            </GlassCard>
+          ) : (
+            <PunchCard
+              restaurants={restaurants.map((r) => ({ ...r }))}
+              initialPunches={todayPunches.map((p) => ({
+                id: p.id,
+                type: p.type,
+                punchedAt: p.punchedAt.toISOString(),
+                restaurantName: p.restaurant?.name,
+              }))}
+              compact
+            />
           )}
+
+          {/* 小提示卡 */}
+          <GlassCard variant="subtle" className="p-4">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <Utensils className="h-3.5 w-3.5" />
+              小提示
+            </div>
+            <ul className="space-y-1 text-xs text-slate-600 marker:text-slate-300">
+              <li>· 第一次來請先到「紙娃娃」打扮自己的角色</li>
+              <li>· 上班前請允許瀏覽器定位，否則無法打卡</li>
+              <li>· 短暫離崗請按「休息」，回來時記得「回崗」</li>
+            </ul>
+          </GlassCard>
         </div>
-        {recentRequests.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500">還沒有任何申請紀錄。</div>
-        ) : (
-          <ul className="space-y-2">
-            {recentRequests.map((r) => (
-              <li key={r.id}>
-                <Link
-                  href={`/leave/${r.id}`}
-                  className="glass-subtle glass-hoverable flex items-center justify-between rounded-2xl px-4 py-3.5 text-sm"
-                >
-                  <div>
-                    <div className="font-medium text-slate-900">
-                      {format(r.startDate, "yyyy-MM-dd")}
-                      {r.startDate.getTime() !== r.endDate.getTime() &&
-                        ` ~ ${format(r.endDate, "yyyy-MM-dd")}`}
-                      <span className="ml-2 font-normal text-slate-500">（{r.days} 天）</span>
-                    </div>
-                    <div className="mt-0.5 text-slate-500">{r.reason}</div>
-                  </div>
-                  <StatusBadge status={r.status} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </GlassCard>
+      </div>
     </main>
   );
 }
 
-function NavLink({
-  href,
-  icon,
-  children,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link href={href} className="btn-ghost">
-      {icon}
-      <span className="hidden sm:inline">{children}</span>
-    </Link>
-  );
-}
-
-function employmentLabel(t: string): string {
-  return (
-    { FULL_TIME: "正職", PART_TIME: "兼職", CONTRACT: "約聘", INTERN: "工讀 / 實習" }[t] ?? t
-  );
-}
-
-function Stat({ label, value, emphasis }: { label: string; value: number; emphasis?: boolean }) {
-  return (
-    <div>
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div
-        className={
-          emphasis
-            ? "mt-1 text-4xl font-bold text-gradient animate-soft-pulse"
-            : "mt-1 text-4xl font-semibold text-slate-900"
-        }
-      >
-        {value}
-        <span className="ml-1 text-sm font-normal text-slate-400">天</span>
-      </div>
-    </div>
-  );
+function roleLabel(role: string): string {
+  return { EMPLOYEE: "員工", MANAGER: "店長", ADMIN: "管理員" }[role] ?? role;
 }

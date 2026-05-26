@@ -2,7 +2,7 @@
  * 位置 / IP 驗證。
  */
 
-import type { Office } from "@prisma/client";
+import type { Restaurant } from "@prisma/client";
 
 const EARTH_RADIUS_M = 6371000;
 
@@ -30,16 +30,16 @@ export type LocationCheckResult = {
 
 /**
  * 驗證打卡位置：GPS 距離 + IP 白名單，任一通過視為有效。
- * 若 office 未設定任何驗證條件則直接 valid。
+ * 若餐廳未設定任何驗證條件則直接 valid。
  */
 export function checkPunchLocation(
-  office: Office,
+  restaurant: Restaurant,
   client: { latitude?: number | null; longitude?: number | null; ipAddress?: string | null },
 ): LocationCheckResult {
-  const hasGps = office.latitude != null && office.longitude != null;
-  const ipWhitelist = (office.ipWhitelist ?? "")
+  const hasGps = restaurant.latitude != null && restaurant.longitude != null;
+  const ipWhitelist = (restaurant.ipWhitelist ?? "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
   const hasIpRule = ipWhitelist.length > 0;
 
@@ -47,25 +47,23 @@ export function checkPunchLocation(
     return { valid: true };
   }
 
-  // IP 通過即可
   if (hasIpRule && client.ipAddress && ipWhitelist.includes(client.ipAddress)) {
     return { valid: true };
   }
 
-  // 否則檢查 GPS
   if (hasGps && client.latitude != null && client.longitude != null) {
     const d = distanceMeters(
-      office.latitude as number,
-      office.longitude as number,
+      restaurant.latitude as number,
+      restaurant.longitude as number,
       client.latitude,
       client.longitude,
     );
-    if (d <= office.radiusMeters) {
+    if (d <= restaurant.radiusMeters) {
       return { valid: true, distance: Math.round(d) };
     }
     return {
       valid: false,
-      reason: `距離公司 ${Math.round(d)} 公尺，超出允許範圍 ${office.radiusMeters} 公尺`,
+      reason: `距離分店 ${Math.round(d)} 公尺，超出允許範圍 ${restaurant.radiusMeters} 公尺`,
       distance: Math.round(d),
     };
   }
@@ -74,7 +72,7 @@ export function checkPunchLocation(
     return { valid: false, reason: "未取得 GPS 位置，請允許瀏覽器定位權限" };
   }
 
-  return { valid: false, reason: "IP 不在公司白名單內" };
+  return { valid: false, reason: "IP 不在分店白名單內" };
 }
 
 /** 從 Next.js Request 取得客戶端 IP（支援常見 proxy header） */

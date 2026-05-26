@@ -7,7 +7,7 @@ import { checkPunchLocation, getClientIp } from "@/lib/geo";
 
 const schema = z.object({
   type: z.nativeEnum(PunchType),
-  officeId: z.string().min(1),
+  restaurantId: z.string().min(1),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   userAgent: z.string().max(500).optional(),
@@ -25,13 +25,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "輸入格式有誤" }, { status: 400 });
   }
 
-  const office = await prisma.office.findUnique({ where: { id: parsed.data.officeId } });
-  if (!office || !office.active) {
-    return NextResponse.json({ error: "辦公地點不存在" }, { status: 404 });
+  const restaurant = await prisma.restaurant.findUnique({ where: { id: parsed.data.restaurantId } });
+  if (!restaurant || !restaurant.active) {
+    return NextResponse.json({ error: "餐廳不存在或未啟用" }, { status: 404 });
   }
 
   const ipAddress = getClientIp(req);
-  const check = checkPunchLocation(office, {
+  const check = checkPunchLocation(restaurant, {
     latitude: parsed.data.latitude ?? null,
     longitude: parsed.data.longitude ?? null,
     ipAddress,
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 防重複：5 秒內同一員工/同一 type 視為重複
+  // 防重複：5 秒內同一員工 / 同一 type 視為重複
   const recent = await prisma.attendance.findFirst({
     where: {
       userId: session.userId,
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       userId: session.userId,
       type: parsed.data.type,
       punchedAt: new Date(),
-      officeId: office.id,
+      restaurantId: restaurant.id,
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
       ipAddress: ipAddress ?? undefined,
