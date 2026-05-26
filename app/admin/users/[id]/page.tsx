@@ -8,6 +8,10 @@ import { getSession } from "@/lib/session";
 import { GlassCard } from "@/components/glass-card";
 import { PageHeader } from "@/components/page-header";
 import { EditUserForm } from "./edit-form";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
+import { AvatarPreview } from "@/components/avatar-preview";
+import { configToLook } from "@/lib/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +22,7 @@ export default async function AdminUserDetail({ params }: { params: Promise<{ id
   const [user, managers, balance, periods] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
-      include: { profile: true, manager: { select: { id: true, name: true } } },
+      include: { profile: true, manager: { select: { id: true, name: true } }, avatarConfig: true },
     }),
     prisma.user.findMany({
       where: { role: { in: ["MANAGER", "ADMIN"] }, active: true, NOT: { id } },
@@ -46,6 +50,24 @@ export default async function AdminUserDetail({ params }: { params: Promise<{ id
         subtitle="可編輯所有欄位（含敏感資料）"
         back={{ href: "/admin/users", label: "回員工列表" }}
       />
+
+      <GlassCard variant="strong" className="mb-6 flex items-center justify-between p-5 animate-fade-in">
+        <div className="flex items-center gap-4">
+          <div className="rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 p-2 dark:from-sky-900/40 dark:to-indigo-900/40">
+            <AvatarPreview look={configToLook(user.avatarConfig)} scale={3} animated={false} />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-slate-900">辦公室角色</div>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {user.avatarConfig ? `「${user.avatarConfig.statusMessage ?? "（未設標語）"}」` : "尚未設定，使用預設外觀"}
+            </p>
+          </div>
+        </div>
+        <Link href={`/admin/users/${id}/avatar`} className="btn-ghost">
+          <Sparkles className="h-4 w-4" />
+          編輯角色
+        </Link>
+      </GlassCard>
 
       {balance && balance.year && (
         <GlassCard variant="strong" className="mb-6 p-6 animate-fade-in">

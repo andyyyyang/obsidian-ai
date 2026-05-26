@@ -1,0 +1,201 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import { LogIn, LogOut, Coffee, RotateCcw, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { GlassCard } from "./glass-card";
+
+type Office = { id: string; name: string; latitude: number | null; longitude: number | null };
+type Punch = { id: string; type: string; punchedAt: string; officeName?: string };
+
+const TYPE_LABEL: Record<string, string> = {
+  CLOCK_IN: "上班",
+  CLOCK_OUT: "下班",
+  BREAK_OUT: "外出",
+  BREAK_IN: "回來",
+};
+
+export function PunchCard({ offices, initialPunches }: { offices: Office[]; initialPunches: Punch[] }) {
+  const [punches, setPunches] = useState<Punch[]>(initialPunches);
+  const [officeId, setOfficeId] = useState<string>(offices[0]?.id ?? "");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locError, setLocError] = useState<string | null>(null);
+  const [now, setNow] = useState<Date>(new Date());
+  const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocError("此瀏覽器不支援定位");
+      return;
+    }
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocError(null);
+      },
+      (err) => setLocError(err.message),
+      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 10_000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  const lastByType = new Map<string, Punch>();
+  for (const p of punches) lastByType.set(p.type, p);
+
+  const hasClockedIn = lastByType.has("CLOCK_IN");
+  const hasClockedOut = lastByType.has("CLOCK_OUT");
+  const onBreak =
+    lastByType.has("BREAK_OUT") &&
+    (!lastByType.get("BREAK_IN") ||
+      new Date(lastByType.get("BREAK_OUT")!.punchedAt) >
+        new Date(lastByType.get("BREAK_IN")!.punchedAt));
+
+  function doPunch(type: string) {
+    if (!officeId) {
+      toast.error("請先選擇辦公地點");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/attendance/punch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type,
+            officeId,
+            latitude: coords?.lat,
+            longitude: coords?.lng,
+            userAgent: navigator.userAgent,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error ?? "打卡失敗");
+          return;
+        }
+        toast.success(`${TYPE_LABEL[type]}打卡成功 ${data.distance != null ? `（距離 ${data.distance}m）` : ""}`);
+        const refreshed = await fetch("/api/attendance/today", { cache: "no-store" });
+        const refreshedJson = await refreshed.json();
+        setPunches(refreshedJson.punches);
+      } catch (e) {
+        toast.error("網路錯誤");
+      }
+    });
+  }
+
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString("zh-TW", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Taipei",
+    });
+
+  return (
+    <GlassCard variant="strong" className="p-7">
+      {/* 時鐘 */}
+      <div className="mb-6 text-center">
+        <div className="text-5xl font-bold tabular-nums tracking-tight text-slate-900">
+          {now.toLocaleTimeString("zh-TW", { hour12: false, timeZone: "Asia/Taipei" })}
+        </div>
+        <div className="mt-1 text-sm text-slate-500">
+          {now.toLocaleDateString("zh-TW", { dateStyle: "full", timeZone: "Asia/Taipei" })}
+        </div>
+      </div>
+
+      {/* 辦公地點選擇 */}
+      {offices.length > 1 && (
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-medium text-slate-500">辦公地點</label>
+          <select
+            value={officeId}
+            onChange={(e) => setOfficeId(e.target.value)}
+            className="input"
+          >
+            {offices.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* 位置狀態 */}
+      <div className="mb-5 flex items-center justify-center gap-2 text-xs text-slate-500">
+        <MapPin className="h-3.5 w-3.5" />
+        {coords ? (
+          <span>已取得位置（{coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}）</span>
+        ) : locError ? (
+          <span className="text-rose-600">無法定位：{locError}</span>
+        ) : (
+          <span>正在取得位置…</span>
+        )}
+      </div>
+
+      {/* 打卡按鈕 */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          className="btn-success py-6 text-base"
+          disabled={pending || hasClockedIn}
+          onClick={() => doPunch("CLOCK_IN")}
+        >
+          <LogIn className="h-5 w-5" />
+          上班打卡
+        </button>
+        <button
+          className="btn-primary py-6 text-base"
+          disabled={pending || !hasClockedIn}
+          onClick={() => doPunch("CLOCK_OUT")}
+        >
+          <LogOut className="h-5 w-5" />
+          下班打卡
+        </button>
+        <button
+          className="btn-ghost py-4"
+          disabled={pending || !hasClockedIn || hasClockedOut || onBreak}
+          onClick={() => doPunch("BREAK_OUT")}
+        >
+          <Coffee className="h-4 w-4" />
+          外出
+        </button>
+        <button
+          className="btn-ghost py-4"
+          disabled={pending || !onBreak}
+          onClick={() => doPunch("BREAK_IN")}
+        >
+          <RotateCcw className="h-4 w-4" />
+          回來
+        </button>
+      </div>
+
+      {/* 今日打卡紀錄 */}
+      <div className="mt-6">
+        <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">今日紀錄</h3>
+        {punches.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">
+            今天還沒有打卡
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {punches.map((p) => (
+              <li
+                key={p.id}
+                className="glass-subtle flex items-center justify-between rounded-2xl px-4 py-2.5 text-sm"
+              >
+                <span className="font-medium text-slate-900">{TYPE_LABEL[p.type] ?? p.type}</span>
+                <span className="tabular-nums text-slate-600">{fmtTime(p.punchedAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
