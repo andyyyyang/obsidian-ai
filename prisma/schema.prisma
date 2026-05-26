@@ -42,24 +42,35 @@ enum Role {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 員工角色外觀（楓之谷風 chibi 紙娃娃）
+// 員工角色外觀（楓之谷風 — 接 maplestory.io）
+// 每個欄位都是 maplestory.io 的 item ID
 // ─────────────────────────────────────────────────────────────
 model AvatarConfig {
   id            String  @id @default(cuid())
   userId        String  @unique
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  skinTone      Int     @default(0)
-  hairStyle     Int     @default(0)
-  hairColor     Int     @default(0)
-  shirtColor    Int     @default(0)
-  pantsColor    Int     @default(0)
-  shoeColor     Int     @default(0)
-  eyeStyle      Int     @default(0)
+  // 必選 — 角色身體 / 頭 / 臉 / 髮
+  bodyId        Int     @default(2000)
+  headId        Int     @default(12000)
+  faceId        Int     @default(20000)
+  hairId        Int     @default(30030)
 
-  hat           String?              // cap / wizard / santa / crown / chef / waiter
-  glasses       String?              // round / square / sunglasses
-  apron         Boolean @default(false)
+  // 裝備 (null = 無)
+  hatId             Int?
+  topId             Int?
+  bottomId          Int?
+  overallId         Int?    // 連身衣 (與 top/bottom 互斥)
+  shoesId           Int?
+  capeId            Int?
+  glovesId          Int?
+  weaponId          Int?
+  faceAccessoryId   Int?
+  eyeAccessoryId    Int?
+  earringsId        Int?
+
+  // maplestory.io 版本號
+  version       String  @default("222")
 
   statusMessage String? @db.VarChar(60)
 

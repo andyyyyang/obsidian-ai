@@ -2,80 +2,131 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Dice5 } from "lucide-react";
+import { Dice5, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AvatarLook,
-  DEFAULT_LOOK,
-  HAIR_COLORS,
-  PANTS_COLORS,
-  SHIRT_COLORS,
-  SHOE_COLORS,
-  SKIN_TONES,
-} from "@/lib/pixel-art";
 import { AvatarPreview } from "@/components/avatar-preview";
+import {
+  buildMapleItemIconUrl,
+  MapleLook,
+  MapleStance,
+} from "@/lib/maple-avatar";
+import {
+  CATEGORY_LABELS,
+  MapleCategoryKey,
+  MAPLE_ITEM_CATALOG,
+  SKINS,
+} from "@/lib/maple-items";
 
-const HAIR_STYLE_LABELS = ["短髮", "長髮", "雙馬尾", "龐克", "中分"];
-const EYE_LABELS = ["普通", "笑眼", "眨眼"];
-const HATS = [
-  { value: null, label: "無" },
-  { value: "chef", label: "廚師帽" },
-  { value: "waiter", label: "外場帽" },
-  { value: "cap", label: "棒球帽" },
-  { value: "wizard", label: "巫師帽" },
-  { value: "santa", label: "聖誕帽" },
-  { value: "crown", label: "皇冠" },
+// 哪個分類對應 MapleLook 哪個欄位
+const CATEGORY_TO_FIELD: Record<MapleCategoryKey, keyof MapleLook> = {
+  face: "faceId",
+  hair: "hairId",
+  hat: "hatId",
+  top: "topId",
+  bottom: "bottomId",
+  overall: "overallId",
+  shoes: "shoesId",
+  cape: "capeId",
+  gloves: "glovesId",
+  weapon: "weaponId",
+  faceAccessory: "faceAccessoryId",
+  eyeAccessory: "eyeAccessoryId",
+  earrings: "earringsId",
+};
+
+const CATEGORIES: MapleCategoryKey[] = [
+  "hair",
+  "face",
+  "hat",
+  "top",
+  "bottom",
+  "overall",
+  "shoes",
+  "cape",
+  "gloves",
+  "weapon",
+  "faceAccessory",
+  "eyeAccessory",
+  "earrings",
 ];
-const GLASSES = [
-  { value: null, label: "無" },
-  { value: "round", label: "圓框" },
-  { value: "square", label: "方框" },
-  { value: "sunglasses", label: "墨鏡" },
+
+const STANCES: { value: MapleStance; label: string }[] = [
+  { value: "stand1", label: "站立 1" },
+  { value: "stand2", label: "站立 2" },
+  { value: "walk1", label: "走路 1" },
+  { value: "walk2", label: "走路 2" },
+  { value: "alert", label: "驚訝" },
+  { value: "jump", label: "跳" },
+  { value: "sit", label: "坐" },
 ];
 
 export function AvatarEditor({
   initialLook,
+  initialVersion,
   initialStatus,
-  targetUserId,
 }: {
-  initialLook: AvatarLook;
+  initialLook: MapleLook;
+  initialVersion?: string;
   initialStatus: string;
-  targetUserId?: string;  // 若有 → admin 替別人改
 }) {
   const router = useRouter();
-  const [look, setLook] = useState<AvatarLook>(initialLook);
+  const [look, setLook] = useState<MapleLook>(initialLook);
+  const [version] = useState<string>(initialVersion ?? "222");
   const [status, setStatus] = useState(initialStatus);
+  const [activeCategory, setActiveCategory] = useState<MapleCategoryKey>("hair");
+  const [stance, setStance] = useState<MapleStance>("stand1");
+  const [frame, setFrame] = useState(0);
   const [pending, startTransition] = useTransition();
 
-  function update<K extends keyof AvatarLook>(key: K, value: AvatarLook[K]) {
-    setLook({ ...look, [key]: value });
+  function selectItem(category: MapleCategoryKey, id: number) {
+    const field = CATEGORY_TO_FIELD[category];
+    // face / hair 是必選 (number)；其它是 nullable
+    const isRequired = field === "faceId" || field === "hairId";
+    setLook({
+      ...look,
+      [field]: isRequired ? id : (id === 0 ? null : id),
+    } as MapleLook);
+  }
+
+  function selectSkin(idx: number) {
+    setLook({ ...look, bodyId: SKINS[idx].bodyId, headId: SKINS[idx].headId });
+  }
+
+  function currentSkinIdx(): number {
+    return SKINS.findIndex((s) => s.bodyId === look.bodyId);
   }
 
   function randomize() {
+    const cat = MAPLE_ITEM_CATALOG;
+    const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
     setLook({
-      skinTone: Math.floor(Math.random() * SKIN_TONES.length),
-      hairStyle: Math.floor(Math.random() * HAIR_STYLE_LABELS.length),
-      hairColor: Math.floor(Math.random() * HAIR_COLORS.length),
-      shirtColor: Math.floor(Math.random() * SHIRT_COLORS.length),
-      pantsColor: Math.floor(Math.random() * PANTS_COLORS.length),
-      shoeColor: Math.floor(Math.random() * SHOE_COLORS.length),
-      eyeStyle: Math.floor(Math.random() * EYE_LABELS.length),
-      hat: HATS[Math.floor(Math.random() * HATS.length)].value,
-      glasses: GLASSES[Math.floor(Math.random() * GLASSES.length)].value,
-      apron: Math.random() < 0.7,
+      ...look,
+      faceId: pick(cat.face).id,
+      hairId: pick(cat.hair).id,
+      hatId: pickOrNull(cat.hat, 0.5),
+      topId: pickOrNull(cat.top, 0.6),
+      bottomId: pickOrNull(cat.bottom, 0.6),
+      overallId: Math.random() < 0.2 ? pick(cat.overall).id || null : null,
+      shoesId: pickOrNull(cat.shoes, 0.5),
+      capeId: pickOrNull(cat.cape, 0.25),
+      glovesId: pickOrNull(cat.gloves, 0.25),
+      weaponId: pickOrNull(cat.weapon, 0.4),
+      faceAccessoryId: pickOrNull(cat.faceAccessory, 0.2),
+      eyeAccessoryId: pickOrNull(cat.eyeAccessory, 0.3),
+      earringsId: pickOrNull(cat.earrings, 0.2),
     });
   }
 
   function save() {
-    const url = targetUserId ? `/api/admin/users/${targetUserId}/avatar` : "/api/me/avatar";
     startTransition(async () => {
-      const res = await fetch(url, {
+      const res = await fetch("/api/me/avatar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...look, statusMessage: status }),
+        body: JSON.stringify({ ...look, version, statusMessage: status }),
       });
       if (!res.ok) {
-        toast.error("儲存失敗");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "儲存失敗");
         return;
       }
       toast.success("已儲存外觀");
@@ -83,180 +134,142 @@ export function AvatarEditor({
     });
   }
 
+  const items = MAPLE_ITEM_CATALOG[activeCategory];
+  const activeField = CATEGORY_TO_FIELD[activeCategory];
+  const currentItemId = (look[activeField] ?? 0) as number;
+
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[200px_1fr]">
-      {/* 預覽 */}
-      <div className="flex flex-col items-center gap-3 rounded-3xl bg-gradient-to-br from-sky-100 to-indigo-100 p-6 dark:from-sky-900/40 dark:to-indigo-900/40">
-        <div className="text-xs uppercase tracking-wide text-slate-500">即時預覽</div>
-        <div className="rounded-2xl bg-white/60 p-3 shadow-inner">
-          <AvatarPreview look={look} scale={6} />
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-[260px_1fr]">
+      {/* 左：預覽 + 控制 */}
+      <div className="space-y-4">
+        <div className="rounded-3xl bg-gradient-to-br from-amber-100 to-rose-100 p-4 dark:from-amber-900/30 dark:to-rose-900/30">
+          <div className="mb-2 text-center text-xs uppercase tracking-wide text-slate-500">即時預覽</div>
+          <div className="flex h-[260px] items-center justify-center rounded-2xl bg-white/50 shadow-inner">
+            <AvatarPreview
+              look={look}
+              version={version}
+              stance={stance}
+              frame={frame}
+              resize={2}
+            />
+          </div>
+
+          <div className="mt-3 space-y-2">
+            <select className="input text-xs" value={stance} onChange={(e) => setStance(e.target.value as MapleStance)}>
+              {STANCES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+            <input
+              type="range"
+              min={0}
+              max={3}
+              value={frame}
+              onChange={(e) => setFrame(Number(e.target.value))}
+              className="w-full"
+            />
+            <div className="text-center text-[11px] text-slate-500">Frame {frame}</div>
+          </div>
         </div>
+
         <input
-          className="input text-center text-xs"
+          className="input"
           maxLength={60}
-          placeholder="頭上的話 (選填)"
+          placeholder="頭上的氣泡話 (選填)"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         />
-        <div className="flex w-full gap-2">
+
+        <div className="flex gap-2">
           <button onClick={randomize} className="btn-ghost flex-1">
             <Dice5 className="h-4 w-4" />
             隨機
           </button>
           <button onClick={save} disabled={pending} className="btn-primary flex-1">
-            <Save className="h-4 w-4" />
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             儲存
           </button>
         </div>
       </div>
 
-      {/* 設定面板 */}
-      <div className="space-y-5">
-        <Section label="髮型">
-          <OptionRow
-            options={HAIR_STYLE_LABELS.map((label, i) => ({ value: i, label }))}
-            value={look.hairStyle}
-            onChange={(v) => update("hairStyle", v)}
-          />
-        </Section>
+      {/* 右：分類 tab + 道具網格 */}
+      <div>
+        {/* 膚色 — 獨立小區 */}
+        <div className="mb-4">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">膚色</div>
+          <div className="flex gap-2">
+            {SKINS.map((s, i) => (
+              <button
+                key={s.bodyId}
+                onClick={() => selectSkin(i)}
+                className={`rounded-xl border px-3 py-1.5 text-sm transition ${
+                  currentSkinIdx() === i
+                    ? "border-amber-500 bg-amber-500 text-white shadow"
+                    : "border-slate-200 bg-white/60 text-slate-700 hover:bg-white"
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <Section label="髮色">
-          <ColorRow
-            colors={HAIR_COLORS.map((c) => c.main)}
-            value={look.hairColor}
-            onChange={(v) => update("hairColor", v)}
-          />
-        </Section>
+        {/* 分類 tabs */}
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`rounded-xl px-3 py-1.5 text-xs transition ${
+                activeCategory === cat
+                  ? "bg-slate-900 text-white shadow"
+                  : "bg-white/60 text-slate-600 hover:bg-white"
+              }`}
+            >
+              {CATEGORY_LABELS[cat]}
+            </button>
+          ))}
+        </div>
 
-        <Section label="膚色">
-          <ColorRow
-            colors={SKIN_TONES.map((s) => s.base)}
-            value={look.skinTone}
-            onChange={(v) => update("skinTone", v)}
-          />
-        </Section>
-
-        <Section label="表情">
-          <OptionRow
-            options={EYE_LABELS.map((label, i) => ({ value: i, label }))}
-            value={look.eyeStyle}
-            onChange={(v) => update("eyeStyle", v)}
-          />
-        </Section>
-
-        <Section label="上衣顏色">
-          <ColorRow
-            colors={SHIRT_COLORS.map((c) => c.main)}
-            value={look.shirtColor}
-            onChange={(v) => update("shirtColor", v)}
-          />
-        </Section>
-
-        <Section label="褲子顏色">
-          <ColorRow
-            colors={PANTS_COLORS.map((c) => c.main)}
-            value={look.pantsColor}
-            onChange={(v) => update("pantsColor", v)}
-          />
-        </Section>
-
-        <Section label="鞋子顏色">
-          <ColorRow
-            colors={SHOE_COLORS}
-            value={look.shoeColor}
-            onChange={(v) => update("shoeColor", v)}
-          />
-        </Section>
-
-        <Section label="帽子">
-          <OptionRow
-            options={HATS.map((h) => ({ value: h.value, label: h.label }))}
-            value={look.hat}
-            onChange={(v) => update("hat", v)}
-          />
-        </Section>
-
-        <Section label="眼鏡">
-          <OptionRow
-            options={GLASSES.map((g) => ({ value: g.value, label: g.label }))}
-            value={look.glasses}
-            onChange={(v) => update("glasses", v)}
-          />
-        </Section>
-
-        <Section label="圍裙">
-          <OptionRow
-            options={[
-              { value: false, label: "無" },
-              { value: true, label: "穿上" },
-            ]}
-            value={look.apron}
-            onChange={(v) => update("apron", v)}
-          />
-        </Section>
+        {/* item grid */}
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+          {items.map((item) => {
+            const selected = item.id === currentItemId || (item.id === 0 && !currentItemId);
+            return (
+              <button
+                key={item.id}
+                onClick={() => selectItem(activeCategory, item.id)}
+                className={`flex flex-col items-center gap-1 rounded-2xl border p-2 text-xs transition ${
+                  selected
+                    ? "border-amber-500 bg-amber-50 shadow"
+                    : "border-slate-200 bg-white/60 hover:bg-white"
+                }`}
+              >
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
+                  {item.id === 0 ? (
+                    <span className="text-[18px] text-slate-300">×</span>
+                  ) : (
+                    <img
+                      src={buildMapleItemIconUrl(item.id, version)}
+                      alt={item.name}
+                      style={{ imageRendering: "pixelated", maxHeight: 40, maxWidth: 40 }}
+                      onError={(e) => (e.currentTarget.style.opacity = "0.2")}
+                    />
+                  )}
+                </div>
+                <span className="line-clamp-2 h-8 text-center text-[10px] text-slate-600">{item.name}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
-      {children}
-    </div>
-  );
-}
-
-function ColorRow({
-  colors,
-  value,
-  onChange,
-}: {
-  colors: string[];
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {colors.map((c, i) => (
-        <button
-          key={i}
-          onClick={() => onChange(i)}
-          className={`h-9 w-9 rounded-xl border-2 transition ${
-            value === i ? "scale-110 border-blue-500 shadow" : "border-white/60"
-          }`}
-          style={{ background: c }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function OptionRow<T>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o, i) => (
-        <button
-          key={i}
-          onClick={() => onChange(o.value)}
-          className={`rounded-xl border px-3 py-1.5 text-sm transition ${
-            o.value === value
-              ? "border-blue-500 bg-blue-500 text-white shadow"
-              : "border-slate-200 bg-white/60 text-slate-700 hover:bg-white"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
+function pickOrNull(arr: readonly { id: number; name: string }[], chance: number): number | null {
+  if (Math.random() > chance) return null;
+  const candidates = arr.filter((x) => x.id !== 0);
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)].id;
 }

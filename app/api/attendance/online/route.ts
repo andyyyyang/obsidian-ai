@@ -46,6 +46,7 @@ export async function GET() {
       isSelf: userId === session.userId,
       onBreak: s.last === "BREAK_OUT",
       look: s.avatar ? configToLook(s.avatar) : deterministicLook(userId),
+      version: s.avatar?.version ?? "222",
       statusMessage: s.avatar?.statusMessage ?? null,
     }));
 
@@ -62,6 +63,7 @@ export async function GET() {
         isSelf: true,
         onBreak: false,
         look: me.avatarConfig ? configToLook(me.avatarConfig) : deterministicLook(me.id),
+        version: me.avatarConfig?.version ?? "222",
         statusMessage: me.avatarConfig?.statusMessage ?? null,
       });
     }

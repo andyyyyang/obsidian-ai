@@ -1,15 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import {
-  AvatarLook,
-  CHAR_H,
-  CHAR_W,
-  drawAvatar,
-  drawNameTag,
-  drawShadow,
-  drawSpeechBubble,
-} from "@/lib/pixel-art";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { buildMapleAvatarUrl, MapleLook } from "@/lib/maple-avatar";
 import {
   drawBarStool,
   drawCounter,
@@ -33,7 +25,8 @@ import {
 export type RestaurantOccupant = {
   id: string;
   name: string;
-  look: AvatarLook;
+  look: MapleLook;
+  version?: string;
   statusMessage?: string | null;
   onBreak?: boolean;
   isSelf?: boolean;
@@ -47,19 +40,14 @@ type CharSprite = {
   targetY: number;
   speed: number;
   flip: boolean;
-  walkPhase: number;
-  walkClock: number;
+  walking: boolean;
   idleTimer: number;
-  bubbleTimer: number;
 };
 
 // 邏輯解析度（像素，未放大）
 const LOGICAL_W = 400;
 const LOGICAL_H = 220;
-
-// 牆面 / 地板分界
 const WALL_BOTTOM = 96;
-// 員工活動區（廚房 + 外場走道，桌椅之間）
 const FLOOR_TOP = WALL_BOTTOM + 8;
 const FLOOR_BOTTOM = LOGICAL_H - 8;
 const FLOOR_LEFT = 8;
@@ -67,7 +55,7 @@ const FLOOR_RIGHT = LOGICAL_W - 8;
 
 export function PixelRestaurant({
   occupants,
-  scale = 3,
+  scale = 2,
   className,
   showNames = true,
 }: {
@@ -77,18 +65,18 @@ export function PixelRestaurant({
   showNames?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const spritesRef = useRef<CharSprite[]>([]);
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef<number>(0);
+  const [, setTick] = useState(0);
 
-  // 維持 occupants 變動時的 sprite map（保留同 id 的位置，避免每次刷新跳動）
+  // 維持同 id 角色的位置（避免每次 props 變動跳動）
   useEffect(() => {
     const prev = new Map(spritesRef.current.map((s) => [s.occupant.id, s] as const));
     spritesRef.current = occupants.map((o, i) => {
       const existing = prev.get(o.id);
-      if (existing) {
-        return { ...existing, occupant: o };
-      }
+      if (existing) return { ...existing, occupant: o };
       const startX = FLOOR_LEFT + 24 + ((i * 47) % (FLOOR_RIGHT - FLOOR_LEFT - 48));
       const startY = FLOOR_TOP + 12 + ((i * 19) % (FLOOR_BOTTOM - FLOOR_TOP - 30));
       return {
@@ -99,14 +87,13 @@ export function PixelRestaurant({
         targetY: startY,
         speed: 0.25 + Math.random() * 0.25,
         flip: false,
-        walkPhase: 0,
-        walkClock: 0,
+        walking: false,
         idleTimer: 1 + Math.random() * 3,
-        bubbleTimer: 0,
       };
     });
   }, [occupants]);
 
+  // 繪餐廳場景 + 角色運動 loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -145,61 +132,59 @@ export function PixelRestaurant({
       drawRestWindow(ctx!, 312 * scale, 16 * scale, scale, { tone: currentTone });
       drawWallClock(ctx!, 366 * scale, 22 * scale, scale);
 
-      // 大門（牆面右下緣）
       drawEntryDoor(ctx!, 372 * scale, 60 * scale, scale);
 
-      // 吧台（橫跨中段，員工會在這後面準備餐點）
       drawCounter(ctx!, 8 * scale, 80 * scale, scale);
-      // 收銀機放吧台右側
       drawRegister(ctx!, 280 * scale, 70 * scale, scale);
 
-      // 廚房設備（吧台後方靠牆）— 因為已經被牆遮住一部分，所以也畫在牆面
       drawOven(ctx!, 8 * scale, 56 * scale, scale);
       drawEspresso(ctx!, 64 * scale, 60 * scale, scale);
       drawFridge(ctx!, 108 * scale, 50 * scale, scale);
       drawWineRack(ctx!, 144 * scale, 50 * scale, scale);
 
-      // 外場（地板上）— 餐桌椅
-      // 餐桌組 1
+      // 上排桌
       drawDiningTable(ctx!, 24 * scale, 130 * scale, scale);
       drawDiningChair(ctx!, 18 * scale, 122 * scale, scale);
       drawDiningChair(ctx!, 50 * scale, 122 * scale, scale);
       drawDiningChair(ctx!, 18 * scale, 150 * scale, scale);
       drawDiningChair(ctx!, 50 * scale, 150 * scale, scale);
 
-      // 餐桌組 2
       drawDiningTable(ctx!, 104 * scale, 130 * scale, scale);
       drawDiningChair(ctx!, 98 * scale, 122 * scale, scale);
       drawDiningChair(ctx!, 130 * scale, 122 * scale, scale);
       drawDiningChair(ctx!, 98 * scale, 150 * scale, scale);
       drawDiningChair(ctx!, 130 * scale, 150 * scale, scale);
 
-      // 餐桌組 3
       drawDiningTable(ctx!, 184 * scale, 130 * scale, scale);
       drawDiningChair(ctx!, 178 * scale, 122 * scale, scale);
       drawDiningChair(ctx!, 210 * scale, 122 * scale, scale);
       drawDiningChair(ctx!, 178 * scale, 150 * scale, scale);
       drawDiningChair(ctx!, 210 * scale, 150 * scale, scale);
 
-      // 餐桌組 4
       drawDiningTable(ctx!, 264 * scale, 175 * scale, scale);
       drawDiningChair(ctx!, 258 * scale, 167 * scale, scale);
       drawDiningChair(ctx!, 290 * scale, 167 * scale, scale);
       drawDiningChair(ctx!, 258 * scale, 195 * scale, scale);
       drawDiningChair(ctx!, 290 * scale, 195 * scale, scale);
 
-      // 吧台座位區（高腳椅）— 顧客視角朝吧台
       drawBarStool(ctx!, 30 * scale, 100 * scale, scale);
       drawBarStool(ctx!, 60 * scale, 100 * scale, scale);
       drawBarStool(ctx!, 90 * scale, 100 * scale, scale);
 
-      // 角落盆栽
       drawRestPlant(ctx!, 332 * scale, 178 * scale, scale);
 
-      // 吊燈（從天花板垂下）
       drawPendantLamp(ctx!, 60 * scale, 0, scale);
       drawPendantLamp(ctx!, 200 * scale, 0, scale);
       drawPendantLamp(ctx!, 340 * scale, 0, scale);
+
+      // 夜間覆蓋
+      if (currentTone === "night") {
+        ctx!.fillStyle = "rgba(60, 30, 10, 0.18)";
+        ctx!.fillRect(0, 0, canvas!.width, canvas!.height);
+      } else if (currentTone === "evening") {
+        ctx!.fillStyle = "rgba(255, 160, 80, 0.08)";
+        ctx!.fillRect(0, 0, canvas!.width, canvas!.height);
+      }
     }
 
     function step(time: number) {
@@ -208,24 +193,17 @@ export function PixelRestaurant({
       const currentTone = tone();
 
       ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-
-      // 1. 場景
       renderScene(currentTone);
 
-      // 2. 角色更新（隨機巡邏）
-      const sprites = [...spritesRef.current];
-      for (const s of sprites) {
+      // 角色運動 (位置算邏輯，繪圖在 DOM 上層)
+      let anyMoved = false;
+      for (const s of spritesRef.current) {
         s.idleTimer -= dt;
-        s.bubbleTimer -= dt;
         if (s.idleTimer <= 0) {
-          s.targetX = FLOOR_LEFT + 20 + Math.random() * (FLOOR_RIGHT - FLOOR_LEFT - 40);
-          s.targetY = FLOOR_TOP + 12 + Math.random() * (FLOOR_BOTTOM - FLOOR_TOP - 30);
+          s.targetX = FLOOR_LEFT + 30 + Math.random() * (FLOOR_RIGHT - FLOOR_LEFT - 60);
+          s.targetY = FLOOR_TOP + 16 + Math.random() * (FLOOR_BOTTOM - FLOOR_TOP - 36);
           s.idleTimer = 3 + Math.random() * 5;
         }
-        if (s.bubbleTimer <= -6) {
-          if (s.occupant.statusMessage) s.bubbleTimer = 4;
-        }
-
         const dx = s.targetX - s.x;
         const dy = s.targetY - s.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -236,59 +214,14 @@ export function PixelRestaurant({
           s.x += nx * move;
           s.y += ny * move;
           s.flip = nx < 0;
-          s.walkClock += dt;
-          if (s.walkClock > 0.2) {
-            s.walkPhase = 1 - s.walkPhase;
-            s.walkClock = 0;
-          }
+          s.walking = true;
+          anyMoved = true;
         } else {
-          s.walkPhase = 0;
+          s.walking = false;
         }
       }
 
-      // y 軸由小到大繪製（製造遮擋深度）
-      sprites.sort((a, b) => a.y - b.y);
-
-      for (const s of sprites) {
-        const px = s.x * scale;
-        const py = s.y * scale;
-        drawShadow(ctx!, px, py + CHAR_H * scale, CHAR_W * scale);
-        if (s.occupant.onBreak) ctx!.globalAlpha = 0.55;
-        drawAvatar(ctx!, s.occupant.look, px, py, scale, s.walkPhase, s.flip);
-        ctx!.globalAlpha = 1;
-
-        if (showNames) {
-          drawNameTag(ctx!, s.occupant.name, px + (CHAR_W * scale) / 2, py - 6 * scale, scale);
-        }
-        if (s.bubbleTimer > 0 && s.occupant.statusMessage) {
-          drawSpeechBubble(
-            ctx!,
-            s.occupant.statusMessage,
-            px + (CHAR_W * scale) / 2,
-            py - 16 * scale,
-            scale,
-          );
-        }
-        if (s.occupant.isSelf) {
-          // 黃色小箭頭指向自己
-          ctx!.fillStyle = "#f4c542";
-          const ax = px + (CHAR_W * scale) / 2;
-          const ay = py - 24 * scale;
-          ctx!.fillRect(ax - 2 * scale, ay, 4 * scale, scale);
-          ctx!.fillRect(ax - scale, ay + scale, 2 * scale, scale);
-          ctx!.fillRect(ax, ay + 2 * scale, scale, scale);
-        }
-      }
-
-      // 夜間覆蓋（餐廳營業到晚上會點吊燈，所以蓋一層暖光而不是冷藍）
-      if (currentTone === "night") {
-        ctx!.fillStyle = "rgba(60, 30, 10, 0.18)";
-        ctx!.fillRect(0, 0, canvas!.width, canvas!.height);
-      } else if (currentTone === "evening") {
-        ctx!.fillStyle = "rgba(255, 160, 80, 0.08)";
-        ctx!.fillRect(0, 0, canvas!.width, canvas!.height);
-      }
-
+      if (anyMoved) setTick((t) => (t + 1) % 1_000_000);
       rafRef.current = requestAnimationFrame(step);
     }
 
@@ -296,13 +229,144 @@ export function PixelRestaurant({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [scale, showNames]);
+  }, [scale]);
 
+  // 預先建好每個角色的 URL（避免每幀 rebuild）
+  const characterUrls = useMemo(() => {
+    return new Map(
+      occupants.map((o) => [
+        o.id,
+        {
+          stand: buildMapleAvatarUrl(o.look, {
+            version: o.version,
+            stance: "stand1",
+            frame: 0,
+            resize: 1,
+          }),
+          standFlipped: buildMapleAvatarUrl(o.look, {
+            version: o.version,
+            stance: "stand1",
+            frame: 0,
+            resize: 1,
+            flipX: true,
+          }),
+        },
+      ]),
+    );
+  }, [occupants]);
+
+  // 角色 DOM 浮層
+  // 容器寬度 = canvas 寬度，所以位置直接用 x*scale
   return (
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={containerRef}
       className={className}
-      style={{ imageRendering: "pixelated", display: "block", width: "100%", height: "auto" }}
-    />
+      style={{ position: "relative", display: "inline-block", width: "100%" }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{ imageRendering: "pixelated", display: "block", width: "100%", height: "auto" }}
+      />
+      {/* 角色浮層 */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+        }}
+      >
+        {spritesRef.current.map((s) => {
+          const url = characterUrls.get(s.occupant.id);
+          if (!url) return null;
+          // 容器自動 stretch 到實際顯示尺寸；我們算的座標是邏輯座標，要轉成 % 才能跟 canvas 同步縮放
+          const xPct = (s.x / LOGICAL_W) * 100;
+          const yPct = ((s.y - 28) / LOGICAL_H) * 100; // 往上 28px 對齊腳底
+          return (
+            <div
+              key={s.occupant.id}
+              style={{
+                position: "absolute",
+                left: `${xPct}%`,
+                top: `${yPct}%`,
+                transform: "translate(-50%, 0)",
+                opacity: s.occupant.onBreak ? 0.55 : 1,
+                transition: "opacity 0.4s",
+                filter: s.occupant.isSelf ? "drop-shadow(0 0 4px #fbbf24)" : undefined,
+              }}
+            >
+              {showNames && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "-14px",
+                    transform: "translateX(-50%)",
+                    background: "rgba(0,0,0,0.65)",
+                    color: "#fff",
+                    fontSize: "10px",
+                    padding: "1px 5px",
+                    borderRadius: "4px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {s.occupant.name}
+                </div>
+              )}
+              {s.occupant.statusMessage && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "-32px",
+                    transform: "translateX(-50%)",
+                    background: "#fffbe6",
+                    color: "#1a1410",
+                    border: "1px solid #1a1410",
+                    fontSize: "9px",
+                    padding: "1px 5px",
+                    borderRadius: "4px",
+                    whiteSpace: "nowrap",
+                    maxWidth: "180px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {s.occupant.statusMessage}
+                </div>
+              )}
+              <img
+                src={s.flip ? url.standFlipped : url.stand}
+                alt={s.occupant.name}
+                style={{
+                  imageRendering: "pixelated",
+                  display: "block",
+                  transform: `scale(${scale * 0.6})`,
+                  transformOrigin: "top center",
+                }}
+                onError={(e) => {
+                  // 載失敗就消失（避免顯示破圖）
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+              {s.occupant.isSelf && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "-52px",
+                    transform: "translateX(-50%)",
+                    fontSize: "16px",
+                    color: "#fbbf24",
+                    textShadow: "0 0 4px #000",
+                  }}
+                >
+                  ▼
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -1,42 +1,32 @@
 import type { AvatarConfig } from "@prisma/client";
-import { AvatarLook, DEFAULT_LOOK } from "./pixel-art";
+import { DEFAULT_MAPLE_LOOK, deterministicMapleLook, MapleLook } from "./maple-avatar";
 
-export function configToLook(config: AvatarConfig | null): AvatarLook {
-  if (!config) return DEFAULT_LOOK;
+export function configToLook(config: AvatarConfig | null): MapleLook {
+  if (!config) return DEFAULT_MAPLE_LOOK;
   return {
-    skinTone: config.skinTone,
-    hairStyle: config.hairStyle,
-    hairColor: config.hairColor,
-    shirtColor: config.shirtColor,
-    pantsColor: config.pantsColor,
-    shoeColor: config.shoeColor,
-    eyeStyle: config.eyeStyle,
-    hat: config.hat,
-    glasses: config.glasses,
-    apron: config.apron,
+    bodyId: config.bodyId,
+    headId: config.headId,
+    faceId: config.faceId,
+    hairId: config.hairId,
+    hatId: config.hatId,
+    topId: config.topId,
+    bottomId: config.bottomId,
+    overallId: config.overallId,
+    shoesId: config.shoesId,
+    capeId: config.capeId,
+    glovesId: config.glovesId,
+    weaponId: config.weaponId,
+    faceAccessoryId: config.faceAccessoryId,
+    eyeAccessoryId: config.eyeAccessoryId,
+    earringsId: config.earringsId,
   };
 }
 
+export function configToVersion(config: AvatarConfig | null): string {
+  return config?.version ?? "222";
+}
+
 /** 由員工 id 計算 deterministic 預設外觀（沒設定的人也能有個樣子） */
-export function deterministicLook(seed: string): AvatarLook {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i)) | 0;
-  }
-  const r = (n: number) => {
-    h = (h * 1103515245 + 12345) | 0;
-    return Math.abs(h) % n;
-  };
-  return {
-    skinTone: r(4),
-    hairStyle: r(5),
-    hairColor: r(8),
-    shirtColor: r(8),
-    pantsColor: r(8),
-    shoeColor: r(4),
-    eyeStyle: r(3),
-    hat: null,
-    glasses: null,
-    apron: true,    // 預設穿圍裙 — 餐廳員工嘛
-  };
+export function deterministicLook(seed: string): MapleLook {
+  return deterministicMapleLook(seed);
 }

@@ -28,6 +28,7 @@ export default async function AvatarPage() {
       <GlassCard variant="strong" className="p-6 md:p-8">
         <AvatarEditor
           initialLook={configToLook(user.avatarConfig)}
+          initialVersion={user.avatarConfig?.version ?? "222"}
           initialStatus={user.avatarConfig?.statusMessage ?? ""}
         />
       </GlassCard>

@@ -64,6 +64,7 @@ export default async function HomePage() {
       isSelf: userId === session.userId,
       onBreak: s.last === "BREAK_OUT",
       look: s.avatar ? configToLook(s.avatar) : deterministicLook(userId),
+      version: s.avatar?.version ?? "222",
       statusMessage: s.avatar?.statusMessage ?? null,
     }));
 
@@ -75,6 +76,7 @@ export default async function HomePage() {
       isSelf: true,
       onBreak: false,
       look: me.avatarConfig ? configToLook(me.avatarConfig) : deterministicLook(me.id),
+      version: me.avatarConfig?.version ?? "222",
       statusMessage: me.avatarConfig?.statusMessage ?? null,
     });
   }
@@ -87,8 +89,8 @@ export default async function HomePage() {
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link href="/profile/avatar" className="group relative">
-            <div className="rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 p-2 transition group-hover:scale-105 dark:from-amber-900/40 dark:to-rose-900/40">
-              <AvatarPreview look={configToLook(me.avatarConfig)} scale={2} />
+            <div className="flex h-[100px] w-[80px] items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 p-1 transition group-hover:scale-105 dark:from-amber-900/40 dark:to-rose-900/40">
+              <AvatarPreview look={configToLook(me.avatarConfig)} version={me.avatarConfig?.version} resize={1} />
             </div>
             <div className="absolute -bottom-1 -right-1 rounded-full bg-white p-1 shadow opacity-0 transition group-hover:opacity-100">
               <Sparkles className="h-3 w-3 text-amber-500" />
