@@ -244,3 +244,26 @@ main {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── 列印（薪資單） ─── */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .payslip, .payslip * {
+    visibility: visible;
+  }
+  .payslip {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+}

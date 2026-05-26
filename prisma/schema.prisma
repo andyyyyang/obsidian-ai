@@ -45,6 +45,14 @@ model User {
   auditLogs           AuditLog[]
   employmentPeriods   EmploymentPeriod[]
 
+  // 出勤 / 薪資模組
+  attendances           Attendance[]         @relation("UserAttendances")
+  scheduleAssignments   UserSchedule[]       @relation("UserScheduleAssignments")
+  salaryConfigs         SalaryConfig[]       @relation("UserSalaryConfigs")
+  payrolls              Payroll[]            @relation("UserPayrolls")
+  correctionRequests    AttendanceCorrection[] @relation("CorrectionRequester")
+  reviewedCorrections   AttendanceCorrection[] @relation("CorrectionReviewer")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -246,4 +254,209 @@ model Session {
   expires      DateTime
 
   @@index([userId])
+}
+
+// ═════════════════════════════════════════════════════════════
+// 出勤打卡 / 薪資模組
+// ═════════════════════════════════════════════════════════════
+
+// 辦公地點（公司 / 分店）
+// 用於 GPS + IP 雙驗證打卡：員工只能在此範圍內打卡
+model Office {
+  id            String   @id @default(cuid())
+  name          String                          // 例：台北總部
+  address       String?
+  latitude      Float?                          // GPS 座標
+  longitude     Float?
+  radiusMeters  Int      @default(200)          // 允許打卡半徑（公尺）
+  ipWhitelist   String?                         // 允許 IP（CSV 格式，例 "203.0.113.1,203.0.113.2"）
+  timezone      String   @default("Asia/Taipei")
+  active        Boolean  @default(true)
+
+  schedules     WorkSchedule[]
+  attendances   Attendance[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// 班別設定
+// startTime / endTime 用 "HH:mm" 字串儲存（避免時區地雷）
+// workDays 用 bitfield：bit0=週日, bit1=週一...bit6=週六；例週一~五 = 0b0111110 = 62
+model WorkSchedule {
+  id            String   @id @default(cuid())
+  name          String                          // 例：標準班 9-18
+  startTime     String                          // "09:00"
+  endTime       String                          // "18:00"
+  breakMinutes  Int      @default(60)           // 午休扣除分鐘
+  workDays      Int      @default(62)           // bitfield, 預設週一~五
+  lateGraceMinutes Int   @default(0)            // 遲到寬限分鐘數
+
+  officeId      String?
+  office        Office?  @relation(fields: [officeId], references: [id])
+
+  assignments   UserSchedule[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// 員工 ↔ 班別（含生效區間，支援調班歷史）
+model UserSchedule {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserScheduleAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  scheduleId    String
+  schedule      WorkSchedule @relation(fields: [scheduleId], references: [id])
+  effectiveFrom DateTime
+  effectiveTo   DateTime?                       // null = 至今
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId, effectiveFrom])
+}
+
+// 薪資設定（每員工一筆生效紀錄，調薪時新增）
+model SalaryConfig {
+  id                      String     @id @default(cuid())
+  userId                  String
+  user                    User       @relation("UserSalaryConfigs", fields: [userId], references: [id], onDelete: Cascade)
+
+  type                    SalaryType                  // MONTHLY / HOURLY / DAILY
+  amount                  Float                       // 月薪金額 / 時薪 / 日薪
+  effectiveFrom           DateTime
+  effectiveTo             DateTime?                   // null = 至今
+
+  // 出勤相關
+  fullAttendanceBonus     Float      @default(0)      // 全勤獎金（無遲到/缺勤/請假）
+  lateDeductionPerMinute  Float      @default(0)      // 遲到每分鐘扣款
+  leaveDeductPerDay       Float?                      // 請假每日扣款（null = 月薪 / 應出勤天數）
+
+  // 法定扣繳（HR 自輸入，台灣勞健保級距）
+  laborInsurance          Float      @default(0)      // 勞保自負額（月）
+  healthInsurance         Float      @default(0)      // 健保自負額（月）
+  laborPensionSelf        Float      @default(0)      // 勞退自願提撥（月）
+
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  @@index([userId, effectiveFrom])
+}
+
+enum SalaryType {
+  MONTHLY
+  HOURLY
+  DAILY
+}
+
+// 打卡紀錄（核心表）
+// 每次打卡一筆，type 區分上下班與外出
+model Attendance {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation("UserAttendances", fields: [userId], references: [id])
+
+  type            PunchType
+  punchedAt       DateTime                              // 一律 server time
+
+  officeId        String?
+  office          Office?    @relation(fields: [officeId], references: [id])
+
+  // 位置驗證（記錄當下的客戶端資訊以供稽核）
+  latitude        Float?
+  longitude       Float?
+  ipAddress       String?
+  userAgent       String?    @db.Text
+  locationValid   Boolean    @default(true)            // GPS / IP 驗證結果
+
+  // 補打卡
+  isManualEntry   Boolean    @default(false)
+  approvedById    String?
+  note            String?
+
+  createdAt       DateTime   @default(now())
+
+  @@index([userId, punchedAt])
+  @@index([punchedAt])
+}
+
+enum PunchType {
+  CLOCK_IN          // 上班
+  CLOCK_OUT         // 下班
+  BREAK_OUT         // 外出
+  BREAK_IN          // 回來
+}
+
+// 補打卡申請
+model AttendanceCorrection {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation("CorrectionRequester", fields: [userId], references: [id])
+
+  targetDate    DateTime                                 // 補登的日期
+  type          PunchType
+  proposedTime  DateTime                                 // 補登的時間
+  reason        String
+
+  status        CorrectionStatus @default(PENDING)
+  reviewedById  String?
+  reviewedBy    User?            @relation("CorrectionReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewNote    String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([userId, targetDate])
+  @@index([status])
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// 月份薪資結算（snapshot - 可重新生成覆寫）
+model Payroll {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserPayrolls", fields: [userId], references: [id])
+
+  year            Int
+  month           Int                                    // 1-12
+
+  // 出勤統計
+  expectedDays    Int                                    // 應出勤天數
+  actualDays      Int                                    // 實際出勤天數
+  absentDays      Int                                    // 缺勤天數（沒打卡也沒請假）
+  leaveDays       Float                                  // 請假天數
+  totalMinutes    Int                                    // 總工時（扣午休後）
+  lateMinutes     Int                                    // 遲到分鐘
+  earlyLeaveMinutes Int                                  // 早退分鐘
+  overtimeMinutes Int                                    // 加班分鐘（僅記錄，不自動計薪）
+
+  // 薪資項目（正向）
+  baseSalary      Float                                  // 本薪
+  overtimePay     Float    @default(0)                   // 加班費（HR 手動填）
+  fullAttendanceBonus Float @default(0)                  // 全勤獎金
+  otherBonus      Float    @default(0)                   // 其他獎金
+
+  // 扣款項目（負向）
+  lateDeduction   Float    @default(0)
+  leaveDeduction  Float    @default(0)
+  laborInsurance  Float    @default(0)                   // 勞保
+  healthInsurance Float    @default(0)                   // 健保
+  laborPensionSelf Float   @default(0)                   // 勞退自提
+  incomeTax       Float    @default(0)                   // 所得稅（HR 自填）
+  otherDeduction  Float    @default(0)
+
+  netPay          Float                                  // 實領金額
+  note            String?
+
+  generatedAt     DateTime @default(now())
+  generatedBy     String                                 // admin user id
+
+  @@unique([userId, year, month])
+  @@index([year, month])
 }

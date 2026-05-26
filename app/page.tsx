@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { BriefcaseBusiness, Calendar, ClipboardList, Plus, Settings, User as UserIcon } from "lucide-react";
+import { BriefcaseBusiness, Calendar, ClipboardList, Clock, Plus, Receipt, Settings, User as UserIcon } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getBalance } from "@/lib/balance";
@@ -75,6 +75,15 @@ export default async function HomePage() {
           </div>
         </div>
         <nav className="flex flex-wrap items-center gap-2">
+          <NavLink href="/clock" icon={<Clock className="h-4 w-4" />}>
+            打卡
+          </NavLink>
+          <NavLink href="/attendance" icon={<ClipboardList className="h-4 w-4" />}>
+            出勤
+          </NavLink>
+          <NavLink href="/payroll" icon={<Receipt className="h-4 w-4" />}>
+            薪資單
+          </NavLink>
           <NavLink href="/calendar" icon={<Calendar className="h-4 w-4" />}>
             行事曆
           </NavLink>
