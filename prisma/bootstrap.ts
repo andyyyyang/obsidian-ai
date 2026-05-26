@@ -1,9 +1,10 @@
 /**
- * 首次部署自動建立第一位 admin 帳號 + 一間範例餐廳。
+ * 首次 / 持續部署的初始化：
+ *   1. User 表是空的 → 用 INITIAL_ADMIN_* 環境變數建第一位 admin
+ *   2. Restaurant 表是空的 → 建一間「本店」範例分店（與 User 檢查獨立）
  *
- * 行為：
- *   - 若資料庫內已有任何 User，跳過（不會洗掉現有資料）
- *   - 否則使用 INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD / INITIAL_ADMIN_NAME 建立
+ * 兩個檢查互不相干，這樣即使 User 已存在（舊系統升級），
+ * 也會確保至少有一間分店可以打卡。
  */
 
 import { PrismaClient, Role } from "@prisma/client";
@@ -11,7 +12,7 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-async function main() {
+async function ensureFirstAdmin() {
   const count = await prisma.user.count();
   if (count > 0) {
     console.log(`[bootstrap] 已有 ${count} 位使用者，跳過初始管理員建立。`);
@@ -24,8 +25,7 @@ async function main() {
 
   if (!email || !password) {
     console.warn(
-      "[bootstrap] 找不到 INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD，跳過。\n" +
-        "          首次部署請在環境變數內設定這兩個值。",
+      "[bootstrap] 找不到 INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD，跳過初始 admin。",
     );
     return;
   }
@@ -35,30 +35,39 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.user.create({
-      data: {
-        employeeNo: "M001",
-        email,
-        name,
-        passwordHash,
-        role: Role.ADMIN,
-        jobTitle: "店長",
-      },
-    });
-    await tx.restaurant.create({
-      data: {
-        name: "本店",
-        address: "請至後台設定地址",
-        radiusMeters: 200,
-      },
-    });
+  await prisma.user.create({
+    data: {
+      employeeNo: "M001",
+      email,
+      name,
+      passwordHash,
+      role: Role.ADMIN,
+      jobTitle: "店長",
+    },
   });
-
   console.log(`[bootstrap] ✓ 已建立首位管理員：${email}（員編 M001）`);
-  console.log(`[bootstrap] ✓ 已建立範例餐廳：本店`);
-  console.log(`[bootstrap]   登入後請至 /admin 修改密碼、新增餐廳座標與員工。`);
+}
+
+async function ensureFirstRestaurant() {
+  const count = await prisma.restaurant.count();
+  if (count > 0) {
+    console.log(`[bootstrap] 已有 ${count} 間分店，跳過範例分店建立。`);
+    return;
+  }
+  await prisma.restaurant.create({
+    data: {
+      name: "本店",
+      address: "請至 /admin/restaurants 設定地址",
+      radiusMeters: 5000,  // 預設給大範圍，員工不會被擋住打卡 (店長要記得縮)
+    },
+  });
+  console.log(`[bootstrap] ✓ 已建立範例分店「本店」（5km 半徑，請至後台縮小）`);
+}
+
+async function main() {
+  await ensureFirstAdmin();
+  await ensureFirstRestaurant();
+  console.log(`[bootstrap] 完成。`);
 }
 
 main()

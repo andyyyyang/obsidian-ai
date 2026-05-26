@@ -27,8 +27,8 @@ type CharSprite = {
 };
 
 // 地板 Y 線 — 不同地圖略有差異，數值用 % 表示 (從上往下算)
-// 80% 在多數楓谷小型室內地圖都會落在木地板 / 草地上
-const DEFAULT_FLOOR_Y_PCT = 80;
+// 92% 對應大多數楓谷室內地圖被 16:7 裁切後的「底層木地板 / 石板」
+const DEFAULT_FLOOR_Y_PCT = 92;
 // 角色腳底距離 floor Y 的偏移 (向上)
 const SPRITE_FOOT_OFFSET = 0;
 // 走路速度 (%/秒)
@@ -160,20 +160,25 @@ export function MapleRestaurant({
         ref={containerRef}
         onClick={handleTap}
         onTouchStart={handleTap}
-        className="relative w-full select-none overflow-hidden rounded-2xl bg-slate-100"
+        className="relative w-full select-none overflow-hidden rounded-2xl bg-slate-900"
         style={{
-          aspectRatio: "16 / 7",
+          aspectRatio: "16 / 8",
           minHeight: 360,
           cursor: "pointer",
           touchAction: "manipulation",
         }}
       >
-        {/* 楓谷地圖背景 */}
+        {/* 楓谷地圖背景 — 用 object-cover + 錨點 bottom，
+            畫面下方一定是地板，角色才能站對位置 */}
         <img
           src={mapUrl}
           alt="restaurant map"
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ imageRendering: "pixelated" }}
+          className="absolute inset-0 h-full w-full"
+          style={{
+            imageRendering: "pixelated",
+            objectFit: "cover",
+            objectPosition: "center bottom",
+          }}
           onError={() => setMapLoadError(true)}
           onLoad={() => setMapLoadError(false)}
           draggable={false}
