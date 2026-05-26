@@ -9,6 +9,8 @@ import { GlassCard } from "@/components/glass-card";
 import { AvatarPreview } from "@/components/avatar-preview";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PunchCard } from "@/components/punch-card";
+import { ChatWidget } from "@/components/chat-widget";
+import { MyShiftWidget } from "@/components/my-shift-widget";
 import { RestaurantView } from "./restaurant-view";
 import { LogoutButton } from "./logout-button";
 
@@ -63,6 +65,8 @@ export default async function HomePage() {
       name: s.name,
       isSelf: userId === session.userId,
       onBreak: s.last === "BREAK_OUT",
+      onShift: true,
+      online: true,
       look: s.avatar ? configToLook(s.avatar) : deterministicLook(userId),
       version: s.avatar?.version ?? "222",
       statusMessage: s.avatar?.statusMessage ?? null,
@@ -75,6 +79,8 @@ export default async function HomePage() {
       name: me.name,
       isSelf: true,
       onBreak: false,
+      onShift: false,
+      online: true,
       look: me.avatarConfig ? configToLook(me.avatarConfig) : deterministicLook(me.id),
       version: me.avatarConfig?.version ?? "222",
       statusMessage: me.avatarConfig?.statusMessage ?? null,
@@ -147,9 +153,14 @@ export default async function HomePage() {
       <GlassCard variant="strong" className="mb-4 overflow-hidden p-3">
         <RestaurantView initialOccupants={occupants} />
         <div className="mt-2 px-2 pb-1 text-center text-[11px] text-slate-500">
-          每 20 秒自動更新同事狀態 · 黃色箭頭 ▼ 是你 · 點/觸碰地面控制角色移動
+          每 20 秒自動更新 · 已打卡同事 + 線上中員工都會出現 · 黃箭頭 ▼ 是你 · 點/觸碰地面移動
         </div>
       </GlassCard>
+
+      {/* 本週班表 */}
+      <div className="mb-4">
+        <MyShiftWidget userId={me.id} />
+      </div>
 
       {/* 打卡 + 小提示 雙欄 */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_320px]">
@@ -186,6 +197,8 @@ export default async function HomePage() {
           </ul>
         </GlassCard>
       </div>
+
+      <ChatWidget />
     </main>
   );
 }

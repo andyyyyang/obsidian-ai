@@ -2,10 +2,12 @@
 
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { Heartbeat } from "@/components/heartbeat";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+      <Heartbeat />
       {children}
       <Toaster
         position="top-right"

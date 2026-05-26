@@ -27,12 +27,18 @@ model User {
   jobTitle     String?              // 廚師、外場、吧台、店長…
   hireDate     DateTime @default(now())
   active       Boolean  @default(true)
+  lastSeenAt   DateTime?            // 最近一次心跳，用於「線上中」判定
 
-  attendances  Attendance[]
-  avatarConfig AvatarConfig?
+  attendances    Attendance[]
+  avatarConfig   AvatarConfig?
+  chatMessages   ChatMessage[]      @relation("ChatAuthor")
+  shifts         ShiftAssignment[]  @relation("ShiftAssignee")
+  publishedShifts ShiftAssignment[] @relation("ShiftPublisher")
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([lastSeenAt])
 }
 
 enum Role {
@@ -132,4 +138,46 @@ enum PunchType {
   CLOCK_OUT    // 下班
   BREAK_OUT    // 休息（外出）
   BREAK_IN     // 結束休息
+}
+
+// ─────────────────────────────────────────────────────────────
+// 聊天室訊息
+// ─────────────────────────────────────────────────────────────
+model ChatMessage {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation("ChatAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 班表指派（主管 / admin 設定，員工只讀）
+// 每員工每日最多一筆
+// startTime / endTime 用 "HH:mm" 字串避免時區問題
+// isOff = true 表示休假（startTime/endTime 可省略）
+// ─────────────────────────────────────────────────────────────
+model ShiftAssignment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("ShiftAssignee", fields: [userId], references: [id], onDelete: Cascade)
+
+  date          DateTime                    // 該日凌晨 UTC+8 00:00
+  startTime     String?                     // "09:00"
+  endTime       String?                     // "18:00"
+  isOff         Boolean  @default(false)    // 休假日
+  note          String?  @db.VarChar(120)
+
+  publishedById String?
+  publishedBy   User?    @relation("ShiftPublisher", fields: [publishedById], references: [id])
+  publishedAt   DateTime?                   // null = 草稿，員工看不到
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([userId, date])
 }

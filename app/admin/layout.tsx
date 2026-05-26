@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, ChefHat, ClipboardList, Settings, Users } from "lucide-react";
+import { ArrowLeft, Building2, CalendarCheck, ClipboardList, Settings, Users } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -26,6 +26,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </NavLink>
             <NavLink href="/admin/attendance" icon={<ClipboardList className="h-4 w-4" />}>
               出勤總覽
+            </NavLink>
+            <NavLink href="/admin/shifts" icon={<CalendarCheck className="h-4 w-4" />}>
+              班表
             </NavLink>
           </nav>
           <div className="flex-1" />

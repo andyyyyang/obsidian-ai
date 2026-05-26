@@ -12,6 +12,8 @@ export type RestaurantOccupant = {
   statusMessage?: string | null;
   onBreak?: boolean;
   isSelf?: boolean;
+  onShift?: boolean;   // 今日已打卡且尚未下班
+  online?: boolean;    // 過去 5 分鐘有 ping (即仍在線)
 };
 
 type CharSprite = {
@@ -243,7 +245,7 @@ export function MapleRestaurant({
                 left: `${s.x}%`,
                 top: `${floorYPct + SPRITE_FOOT_OFFSET}%`,
                 transform: `translate(-50%, calc(-100% + ${s.bobOffset}px))`,
-                opacity: s.occupant.onBreak ? 0.55 : 1,
+                opacity: s.occupant.onBreak ? 0.55 : s.occupant.onShift === false ? 0.78 : 1,
                 transition: "opacity 0.4s",
                 pointerEvents: "none",
                 filter: s.occupant.isSelf
@@ -258,17 +260,32 @@ export function MapleRestaurant({
                     left: "50%",
                     top: "-14px",
                     transform: "translateX(-50%)",
-                    background: "rgba(0,0,0,0.78)",
+                    background: s.occupant.onShift ? "rgba(0,0,0,0.78)" : "rgba(120,90,40,0.78)",
                     color: "#fff",
                     fontSize: "11px",
                     padding: "1px 6px",
                     borderRadius: "4px",
                     whiteSpace: "nowrap",
                     fontFamily: "'PingFang TC', monospace",
-                    border: "1px solid rgba(255,255,255,0.15)",
+                    border: s.occupant.online
+                      ? "1px solid rgba(255,255,255,0.45)"
+                      : "1px solid rgba(255,255,255,0.15)",
                   }}
                 >
+                  {s.occupant.online && !s.occupant.isSelf && (
+                    <span style={{
+                      display: "inline-block",
+                      width: 6, height: 6,
+                      background: "#34d399",
+                      borderRadius: "50%",
+                      marginRight: 4,
+                      boxShadow: "0 0 4px #34d399",
+                    }} />
+                  )}
                   {s.occupant.name}
+                  {!s.occupant.onShift && s.occupant.online && (
+                    <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7 }}>線上</span>
+                  )}
                 </div>
               )}
               {s.occupant.statusMessage && (
