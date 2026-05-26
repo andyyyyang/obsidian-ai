@@ -165,17 +165,19 @@ export function ChatWidget() {
             ) : (
               messages.map((m) => (
                 <div key={m.id} className={m.isSelf ? "flex justify-end" : "flex justify-start"}>
-                  <div className="max-w-[80%]">
-                    {!m.isSelf && (
-                      <div className="mb-0.5 text-[10px] font-semibold text-amber-900">
-                        {m.author.name}
-                        {m.author.role !== "EMPLOYEE" && (
-                          <span className="ml-1 rounded-sm bg-amber-200 px-1 text-[9px] text-amber-900">
-                            {m.author.role === "ADMIN" ? "管理員" : "店長"}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  <div className="max-w-[82%]">
+                    {/* 永遠顯示作者名，包含自己 */}
+                    <div className={`mb-0.5 text-[11px] font-bold ${m.isSelf ? "text-right text-rose-700" : "text-amber-900"}`}>
+                      {m.isSelf ? "我" : m.author.name}
+                      {m.author.role !== "EMPLOYEE" && !m.isSelf && (
+                        <span className="ml-1 rounded-sm bg-amber-200 px-1 text-[9px] text-amber-900">
+                          {m.author.role === "ADMIN" ? "管理員" : "店長"}
+                        </span>
+                      )}
+                      <span className="ml-1.5 text-[9px] font-normal text-amber-800/60">
+                        {fmt(m.createdAt)}
+                      </span>
+                    </div>
                     <div
                       className="rounded-2xl px-3 py-1.5 text-sm leading-snug"
                       style={
@@ -183,19 +185,18 @@ export function ChatWidget() {
                           ? {
                               background: "linear-gradient(135deg, #f6b350 0%, #e87a2c 100%)",
                               color: "#fff",
-                              border: "1px solid #5a2510",
+                              border: "1.5px solid #5a2510",
+                              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                             }
                           : {
-                              background: "rgba(255,255,255,0.92)",
+                              background: "rgba(255,255,255,0.95)",
                               color: "#3a2515",
-                              border: "1px solid rgba(139,90,43,0.3)",
+                              border: "1.5px solid rgba(139,90,43,0.4)",
+                              boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
                             }
                       }
                     >
                       {m.content}
-                    </div>
-                    <div className={`mt-0.5 text-[9px] text-amber-800/60 ${m.isSelf ? "text-right" : ""}`}>
-                      {fmt(m.createdAt)}
                     </div>
                   </div>
                 </div>

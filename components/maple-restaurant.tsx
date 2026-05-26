@@ -318,23 +318,35 @@ export function MapleRestaurant({
                   style={{
                     position: "absolute",
                     left: "50%",
-                    top: "-40px",
+                    top: isChatBubble ? "-52px" : "-40px",
                     transform: "translateX(-50%)",
                     background: isChatBubble ? "#ffffff" : "#fffbe6",
                     color: "#1a1410",
                     border: isChatBubble ? "2px solid #2563eb" : "1.5px solid #1a1410",
-                    fontSize: isChatBubble ? "11px" : "10px",
+                    fontSize: isChatBubble ? "12px" : "10px",
                     fontWeight: isChatBubble ? 600 : 400,
-                    padding: "3px 8px",
+                    padding: isChatBubble ? "5px 9px" : "3px 8px",
                     borderRadius: "8px",
                     whiteSpace: "nowrap",
-                    maxWidth: "240px",
+                    maxWidth: "260px",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    boxShadow: isChatBubble ? "0 4px 12px rgba(37,99,235,0.4)" : "0 2px 4px rgba(0,0,0,0.2)",
+                    boxShadow: isChatBubble ? "0 6px 16px rgba(37,99,235,0.45)" : "0 2px 4px rgba(0,0,0,0.2)",
                     animation: isChatBubble ? "bubble-pop 0.3s ease-out" : undefined,
+                    fontFamily: "'PingFang TC', sans-serif",
                   }}
                 >
+                  {isChatBubble && (
+                    <span
+                      style={{
+                        color: s.occupant.isSelf ? "#dc2626" : "#2563eb",
+                        marginRight: 6,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {s.occupant.name}:
+                    </span>
+                  )}
                   {bubbleText}
                   {/* 小箭頭 */}
                   <div

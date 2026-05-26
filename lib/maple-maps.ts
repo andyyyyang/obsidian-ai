@@ -28,16 +28,16 @@ export type MapleMapPreset = {
  * 大廳 / 餐廳場景地圖。
  * floorYPct 表示「地板平台」在我們 object-cover (center bottom) 之後的視覺位置。
  *
- * 預設使用 Ereve (女神之地) — 月光海景 + 巨樹 + 雲端平台。
+ * 預設使用 Ereve 黎明之路 — 月光海景 + 巨樹 + 雲端單一平台。
  */
 export const RESTAURANT_MAPS: MapleMapPreset[] = [
-  { id: 130000000, name: "Ereve 女神之地",       hint: "月光海景 + 巨樹 + 水晶傳送門", floorYPct: 86 },
-  { id: 130030000, name: "Ereve 黎明之路",       hint: "雲端平台 + 月色", floorYPct: 85 },
-  { id: 130020000, name: "Ereve 訓練之路",       hint: "草原 + 雲台", floorYPct: 88 },
-  { id: 100000201, name: "Pig's Bar (Henesys 旅店)", hint: "經典蘑菇木屋酒吧", floorYPct: 92 },
-  { id: 102000003, name: "Ellinia 旅店",          hint: "蘑菇樹屋木餐廳", floorYPct: 92 },
-  { id: 260000100, name: "Ariant 阿拉伯餐廳",     hint: "沙漠墊子 + 地毯", floorYPct: 88 },
-  { id: 250000110, name: "Mu Lung 茶館",          hint: "武當山東方茶屋", floorYPct: 88 },
+  { id: 130030000, name: "Ereve 黎明之路",       hint: "月光海景 + 巨樹 + 雲端平台", floorYPct: 78 },
+  { id: 130000000, name: "Ereve 女神之地 (主場)", hint: "Cygnus 神官之所",          floorYPct: 80 },
+  { id: 130020000, name: "Ereve 訓練之路",       hint: "草原 + 雲台",                floorYPct: 82 },
+  { id: 130000100, name: "Ereve 女神宮殿前",     hint: "宮殿走道",                   floorYPct: 80 },
+  { id: 100000201, name: "Pig's Bar (Henesys 旅店)", hint: "經典蘑菇木屋酒吧",     floorYPct: 92 },
+  { id: 102000003, name: "Ellinia 旅店",          hint: "蘑菇樹屋木餐廳",            floorYPct: 92 },
+  { id: 260000100, name: "Ariant 阿拉伯餐廳",     hint: "沙漠墊子 + 地毯",           floorYPct: 88 },
 ];
 
 export const DEFAULT_RESTAURANT_MAP_ID = RESTAURANT_MAPS[0].id;

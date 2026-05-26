@@ -136,64 +136,78 @@ export default async function HomePage() {
         </nav>
       </header>
 
-      {/* 餐廳店招 */}
-      <div className="mb-4 flex items-center justify-center gap-3 text-center">
-        <div className="flex items-center gap-2 rounded-full bg-white/60 px-5 py-2 shadow-glass backdrop-blur-xl">
-          <ChefHat className="h-5 w-5 text-amber-600" />
-          <span className="font-bold tracking-wide text-slate-800">楓之谷餐廳</span>
-          <span className="text-xs text-slate-500">·</span>
-          <span className="text-xs text-slate-500">
-            <Users className="mr-1 inline h-3 w-3" />
-            在崗 {onShiftCount} 位
-          </span>
-        </div>
-      </div>
-
-      {/* 主場景 — 大張全寬 */}
+      {/* 主場景 — 大張全寬，標頭整合在右上 */}
       <GlassCard variant="strong" className="mb-4 overflow-hidden p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <ChefHat className="h-4 w-4 text-amber-600" />
+            楓之谷餐廳
+          </div>
+          <div className="flex items-center gap-1 text-xs text-slate-600">
+            <Users className="h-3.5 w-3.5 text-emerald-600" />
+            在崗 <span className="font-bold text-emerald-600">{onShiftCount}</span> 位
+          </div>
+        </div>
         <RestaurantView initialOccupants={occupants} />
-        <div className="mt-2 px-2 pb-1 text-center text-[11px] text-slate-500">
-          每 20 秒自動更新 · 已打卡同事 + 線上中員工都會出現 · 黃箭頭 ▼ 是你 · 點/觸碰地面移動
+        <div className="mt-2 text-center text-[11px] text-slate-500">
+          每 20 秒自動更新 · 黃箭頭 ▼ 是你 · 點/觸碰地面移動 · 右下 💬 聊天會冒泡到頭上
         </div>
       </GlassCard>
 
-      {/* 本週班表 */}
-      <div className="mb-4">
+      {/* 下方三欄：打卡 / 本週班表 / 提示 */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* 打卡 */}
+        <div>
+          {restaurants.length === 0 ? (
+            <GlassCard variant="strong" className="p-6 text-center text-sm text-amber-700">
+              尚未建立任何分店<br />
+              <Link href="/admin/restaurants" className="mt-2 inline-block text-ios-blue underline">
+                請至後台新增
+              </Link>
+            </GlassCard>
+          ) : (
+            <PunchCard
+              restaurants={restaurants.map((r) => ({ ...r }))}
+              initialPunches={todayPunches.map((p) => ({
+                id: p.id,
+                type: p.type,
+                punchedAt: p.punchedAt.toISOString(),
+                restaurantName: p.restaurant?.name,
+              }))}
+            />
+          )}
+        </div>
+
+        {/* 本週班表 */}
         <MyShiftWidget userId={me.id} />
-      </div>
 
-      {/* 打卡 + 小提示 雙欄 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_320px]">
-        {restaurants.length === 0 ? (
-          <GlassCard variant="strong" className="p-6 text-center text-sm text-amber-700">
-            尚未建立任何分店<br />
-            <Link href="/admin/restaurants" className="mt-2 inline-block text-ios-blue underline">
-              請至後台新增
-            </Link>
-          </GlassCard>
-        ) : (
-          <PunchCard
-            restaurants={restaurants.map((r) => ({ ...r }))}
-            initialPunches={todayPunches.map((p) => ({
-              id: p.id,
-              type: p.type,
-              punchedAt: p.punchedAt.toISOString(),
-              restaurantName: p.restaurant?.name,
-            }))}
-          />
-        )}
-
-        {/* 小提示卡 */}
+        {/* 小提示 */}
         <GlassCard variant="subtle" className="p-5">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <Utensils className="h-3.5 w-3.5" />
             小提示
           </div>
-          <ul className="space-y-1.5 text-xs text-slate-600 marker:text-slate-300">
-            <li>· 第一次來請先到「紙娃娃」打扮你的角色（13 個分類超過 200 件裝備）</li>
-            <li>· 上班前請允許瀏覽器定位，否則無法打卡</li>
-            <li>· 點 / 觸碰地面 → 操控你的角色走過去</li>
-            <li>· 短暫離崗按「休息」，回來時按「回崗」</li>
+          <ul className="space-y-2 text-xs text-slate-600">
+            <li className="flex gap-2">
+              <span className="text-amber-500">✦</span>
+              <span>到「紙娃娃」打扮你的楓谷角色（300+ 件時裝）</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-amber-500">✦</span>
+              <span>打卡前請允許瀏覽器定位</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-amber-500">✦</span>
+              <span>點 / 觸碰地面 → 操控你角色走過去</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-amber-500">✦</span>
+              <span>右下 💬 發訊息，會在頭頂冒對話泡</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-amber-500">✦</span>
+              <span>短暫離崗按「休息」，回來按「回崗」</span>
+            </li>
           </ul>
         </GlassCard>
       </div>
