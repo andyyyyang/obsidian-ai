@@ -52,6 +52,7 @@ model User {
   payrolls              Payroll[]            @relation("UserPayrolls")
   correctionRequests    AttendanceCorrection[] @relation("CorrectionRequester")
   reviewedCorrections   AttendanceCorrection[] @relation("CorrectionReviewer")
+  avatarConfig          AvatarConfig?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -459,4 +460,39 @@ model Payroll {
 
   @@unique([userId, year, month])
   @@index([year, month])
+}
+
+// ═════════════════════════════════════════════════════════════
+// 像素辦公室 / 角色外觀
+// ═════════════════════════════════════════════════════════════
+
+// 員工的像素角色外觀設定（楓之谷風 chibi）
+model AvatarConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 外觀
+  skinTone        Int      @default(0)        // 0-3
+  hairStyle       Int      @default(0)        // 0-4
+  hairColor       Int      @default(0)        // 0-7
+  shirtColor      Int      @default(0)        // 0-7
+  pantsColor      Int      @default(0)        // 0-7
+  shoeColor       Int      @default(0)        // 0-3
+  eyeStyle        Int      @default(0)        // 0-2
+
+  // 配件（null = 無）
+  hat             String?                     // "cap" | "wizard" | "santa" | "crown"
+  glasses         String?                     // "round" | "square" | "sunglasses"
+  backpack        Boolean  @default(false)
+
+  // 個人標語
+  statusMessage   String?  @db.VarChar(60)    // 頭上的氣泡話
+
+  // 辦公室位置（員工可設定自己的固定工位 x,y；隨機分配若 null）
+  deskX           Int?
+  deskY           Int?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
