@@ -8,6 +8,7 @@ export function middleware(req: NextRequest) {
 
   const isPublic =
     pathname === "/login" ||
+    pathname === "/maple-test" ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico";
