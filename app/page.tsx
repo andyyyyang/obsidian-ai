@@ -143,49 +143,48 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* 主版面：餐廳場景 + 打卡卡片 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-        <GlassCard variant="strong" className="overflow-hidden p-2">
-          <RestaurantView initialOccupants={occupants} />
-          <div className="mt-2 px-3 pb-1 text-center text-[11px] text-slate-500">
-            場景每 20 秒自動更新同事狀態 · 黃色箭頭是你
-          </div>
-        </GlassCard>
-
-        <div className="space-y-3">
-          {restaurants.length === 0 ? (
-            <GlassCard variant="strong" className="p-6 text-center text-sm text-amber-700">
-              尚未建立任何分店<br />
-              <Link href="/admin/restaurants" className="mt-2 inline-block text-ios-blue underline">
-                請至後台新增
-              </Link>
-            </GlassCard>
-          ) : (
-            <PunchCard
-              restaurants={restaurants.map((r) => ({ ...r }))}
-              initialPunches={todayPunches.map((p) => ({
-                id: p.id,
-                type: p.type,
-                punchedAt: p.punchedAt.toISOString(),
-                restaurantName: p.restaurant?.name,
-              }))}
-              compact
-            />
-          )}
-
-          {/* 小提示卡 */}
-          <GlassCard variant="subtle" className="p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <Utensils className="h-3.5 w-3.5" />
-              小提示
-            </div>
-            <ul className="space-y-1 text-xs text-slate-600 marker:text-slate-300">
-              <li>· 第一次來請先到「紙娃娃」打扮自己的角色</li>
-              <li>· 上班前請允許瀏覽器定位，否則無法打卡</li>
-              <li>· 短暫離崗請按「休息」，回來時記得「回崗」</li>
-            </ul>
-          </GlassCard>
+      {/* 主場景 — 大張全寬 */}
+      <GlassCard variant="strong" className="mb-4 overflow-hidden p-3">
+        <RestaurantView initialOccupants={occupants} />
+        <div className="mt-2 px-2 pb-1 text-center text-[11px] text-slate-500">
+          每 20 秒自動更新同事狀態 · 黃色箭頭 ▼ 是你 · 可從上方下拉切換餐廳場景
         </div>
+      </GlassCard>
+
+      {/* 打卡 + 小提示 雙欄 */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_320px]">
+        {restaurants.length === 0 ? (
+          <GlassCard variant="strong" className="p-6 text-center text-sm text-amber-700">
+            尚未建立任何分店<br />
+            <Link href="/admin/restaurants" className="mt-2 inline-block text-ios-blue underline">
+              請至後台新增
+            </Link>
+          </GlassCard>
+        ) : (
+          <PunchCard
+            restaurants={restaurants.map((r) => ({ ...r }))}
+            initialPunches={todayPunches.map((p) => ({
+              id: p.id,
+              type: p.type,
+              punchedAt: p.punchedAt.toISOString(),
+              restaurantName: p.restaurant?.name,
+            }))}
+          />
+        )}
+
+        {/* 小提示卡 */}
+        <GlassCard variant="subtle" className="p-5">
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Utensils className="h-3.5 w-3.5" />
+            小提示
+          </div>
+          <ul className="space-y-1.5 text-xs text-slate-600 marker:text-slate-300">
+            <li>· 第一次來請先到「紙娃娃」打扮你的角色（13 個分類超過 150 件裝備）</li>
+            <li>· 上班前請允許瀏覽器定位，否則無法打卡</li>
+            <li>· 短暫離崗按「休息」，回來時按「回崗」</li>
+            <li>· 場景可切換 16 種餐廳場景（從酒吧到日式神社）</li>
+          </ul>
+        </GlassCard>
       </div>
     </main>
   );

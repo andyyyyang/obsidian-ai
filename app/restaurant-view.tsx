@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PixelRestaurant, RestaurantOccupant } from "@/components/pixel-restaurant";
+import { MapleRestaurant, RestaurantOccupant } from "@/components/maple-restaurant";
 
 export function RestaurantView({ initialOccupants }: { initialOccupants: RestaurantOccupant[] }) {
   const [occupants, setOccupants] = useState(initialOccupants);
@@ -19,5 +19,5 @@ export function RestaurantView({ initialOccupants }: { initialOccupants: Restaur
     return () => clearInterval(id);
   }, []);
 
-  return <PixelRestaurant occupants={occupants} scale={2} />;
+  return <MapleRestaurant occupants={occupants} showMapSelector />;
 }
