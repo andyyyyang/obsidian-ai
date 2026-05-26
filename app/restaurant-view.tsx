@@ -19,5 +19,5 @@ export function RestaurantView({ initialOccupants }: { initialOccupants: Restaur
     return () => clearInterval(id);
   }, []);
 
-  return <MapleRestaurant occupants={occupants} showMapSelector />;
+  return <MapleRestaurant occupants={occupants} />;
 }

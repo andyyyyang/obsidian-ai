@@ -147,7 +147,7 @@ export default async function HomePage() {
       <GlassCard variant="strong" className="mb-4 overflow-hidden p-3">
         <RestaurantView initialOccupants={occupants} />
         <div className="mt-2 px-2 pb-1 text-center text-[11px] text-slate-500">
-          每 20 秒自動更新同事狀態 · 黃色箭頭 ▼ 是你 · 可從上方下拉切換餐廳場景
+          每 20 秒自動更新同事狀態 · 黃色箭頭 ▼ 是你 · 點/觸碰地面控制角色移動
         </div>
       </GlassCard>
 
@@ -179,10 +179,10 @@ export default async function HomePage() {
             小提示
           </div>
           <ul className="space-y-1.5 text-xs text-slate-600 marker:text-slate-300">
-            <li>· 第一次來請先到「紙娃娃」打扮你的角色（13 個分類超過 150 件裝備）</li>
+            <li>· 第一次來請先到「紙娃娃」打扮你的角色（13 個分類超過 200 件裝備）</li>
             <li>· 上班前請允許瀏覽器定位，否則無法打卡</li>
+            <li>· 點 / 觸碰地面 → 操控你的角色走過去</li>
             <li>· 短暫離崗按「休息」，回來時按「回崗」</li>
-            <li>· 場景可切換 16 種餐廳場景（從酒吧到日式神社）</li>
           </ul>
         </GlassCard>
       </div>
