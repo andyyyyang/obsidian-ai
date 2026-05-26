@@ -62,3 +62,19 @@ export function tpeWeekday(d: Date): number {
   const t = new Date(d.getTime() + TPE_OFFSET_MIN * 60_000);
   return t.getUTCDay();
 }
+
+/** 取得某日期所屬「週一起始」的週區間（以台北時間為準） */
+export function tpeWeekRange(d: Date = new Date()): { start: Date; end: Date; days: string[] } {
+  const dateStr = tpeDateString(d);
+  const startOfDay = new Date(`${dateStr}T00:00:00+08:00`);
+  const weekday = tpeWeekday(d); // 0=Sun..6=Sat
+  // 想要 Mon=0..Sun=6，把日轉為週末
+  const mondayOffset = (weekday + 6) % 7;
+  const start = new Date(startOfDay.getTime() - mondayOffset * 24 * 60 * 60_000);
+  const end = new Date(start.getTime() + 7 * 24 * 60 * 60_000);
+  const days: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    days.push(tpeDateString(new Date(start.getTime() + i * 24 * 60 * 60_000)));
+  }
+  return { start, end, days };
+}

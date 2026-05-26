@@ -54,6 +54,12 @@ model User {
   reviewedCorrections   AttendanceCorrection[] @relation("CorrectionReviewer")
   avatarConfig          AvatarConfig?
 
+  // 聊天 / 公告 / 班表
+  chatMessages          ChatMessage[]        @relation("ChatAuthor")
+  announcements         Announcement[]       @relation("AnnouncementAuthor")
+  shiftAssignments      ShiftAssignment[]    @relation("ShiftAssignee")
+  publishedShifts       ShiftAssignment[]    @relation("ShiftPublisher")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -495,4 +501,59 @@ model AvatarConfig {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ═════════════════════════════════════════════════════════════
+// 公共聊天 / 公告 / 班表
+// ═════════════════════════════════════════════════════════════
+
+// 公共聊天室訊息
+model ChatMessage {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation("ChatAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// 公告 / 主管宣布事項
+model Announcement {
+  id          String   @id @default(cuid())
+  authorId    String
+  author      User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  title       String   @db.VarChar(120)
+  content     String   @db.Text
+  pinned      Boolean  @default(false)        // 是否置頂
+  publishedAt DateTime @default(now())        // 主管想顯示的日期 (預設 = 建立日)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([publishedAt])
+  @@index([pinned, publishedAt])
+}
+
+// 班表指派（每員工每日）
+// 主管批次建立後一鍵發佈；員工只看到 publishedAt != null 的
+model ShiftAssignment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("ShiftAssignee", fields: [userId], references: [id], onDelete: Cascade)
+
+  date          DateTime                                // 台北日曆日 00:00 UTC+8
+  startTime     String?                                 // "HH:mm"，null = 該日休假
+  endTime       String?
+  note          String?  @db.VarChar(120)
+
+  publishedById String?
+  publishedBy   User?    @relation("ShiftPublisher", fields: [publishedById], references: [id])
+  publishedAt   DateTime?                               // null = 草稿 (員工看不到)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([userId, date])
 }

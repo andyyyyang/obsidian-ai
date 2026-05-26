@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Calculator, Clock, Download, LayoutDashboard, Receipt, Users, Wallet } from "lucide-react";
+import { ArrowLeft, Building2, Calculator, CalendarCheck, Clock, Download, LayoutDashboard, Megaphone, Receipt, Users, Wallet } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -35,6 +35,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </NavLink>
             <NavLink href="/admin/payroll" icon={<Receipt className="h-4 w-4" />}>
               薪資
+            </NavLink>
+            <NavLink href="/admin/schedule" icon={<CalendarCheck className="h-4 w-4" />}>
+              班表
+            </NavLink>
+            <NavLink href="/announcements" icon={<Megaphone className="h-4 w-4" />}>
+              公告
             </NavLink>
             <NavLink href="/admin/export" icon={<Download className="h-4 w-4" />}>
               匯出

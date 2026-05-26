@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { BriefcaseBusiness, Calendar, ClipboardList, Clock, Gamepad2, Plus, Receipt, Settings, Sparkles, User as UserIcon } from "lucide-react";
+import { BriefcaseBusiness, Calendar, CalendarCheck, ClipboardList, Clock, Gamepad2, Megaphone, MessageSquare, Plus, Receipt, Settings, Sparkles, User as UserIcon } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getBalance } from "@/lib/balance";
@@ -21,9 +21,12 @@ import { configToLook } from "@/lib/avatar";
 import { YearProgress } from "@/components/year-progress";
 import {
   AnniversaryWidget,
+  AnnouncementWidget,
   BirthdayWidget,
+  TodayShiftWidget,
   UpcomingLeavesWidget,
 } from "@/components/home-widgets";
+import { tpeToday, tpeToUtc } from "@/lib/tz";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +52,10 @@ export default async function HomePage() {
   });
   if (!user) redirect("/login");
 
-  const [balance, recentRequests, birthdays, anniversaries, upcomingLeaves] = await Promise.all([
+  const todayStr = tpeToday();
+  const todayUtc = tpeToUtc(todayStr, "00:00");
+
+  const [balance, recentRequests, birthdays, anniversaries, upcomingLeaves, recentAnnouncements, todayShift] = await Promise.all([
     getBalance(user.id),
     prisma.leaveRequest.findMany({
       where: { requesterId: user.id },
@@ -59,6 +65,16 @@ export default async function HomePage() {
     getUpcomingBirthdays(14),
     getUpcomingAnniversaries(14),
     getUpcomingLeaves(7),
+    prisma.announcement.findMany({
+      where: { publishedAt: { lte: new Date() } },
+      orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }],
+      take: 4,
+      include: { author: { select: { name: true } } },
+    }),
+    prisma.shiftAssignment.findFirst({
+      where: { userId: user.id, date: todayUtc, publishedAt: { not: null } },
+      select: { startTime: true, endTime: true, note: true },
+    }),
   ]);
 
   const progress = balance.year ? yearProgress(balance.year.start, balance.year.end) : 0;
@@ -87,6 +103,15 @@ export default async function HomePage() {
         <nav className="flex flex-wrap items-center gap-2">
           <NavLink href="/office" icon={<Gamepad2 className="h-4 w-4" />}>
             辦公室
+          </NavLink>
+          <NavLink href="/chat" icon={<MessageSquare className="h-4 w-4" />}>
+            聊天室
+          </NavLink>
+          <NavLink href="/announcements" icon={<Megaphone className="h-4 w-4" />}>
+            公告
+          </NavLink>
+          <NavLink href="/schedule" icon={<CalendarCheck className="h-4 w-4" />}>
+            班表
           </NavLink>
           <NavLink href="/profile/avatar" icon={<Sparkles className="h-4 w-4" />}>
             角色
@@ -160,7 +185,25 @@ export default async function HomePage() {
         )}
       </GlassCard>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <AnnouncementWidget
+          items={recentAnnouncements.map((a) => ({
+            id: a.id,
+            title: a.title,
+            authorName: a.author.name,
+            publishedAt: a.publishedAt,
+            pinned: a.pinned,
+          }))}
+        />
+        <TodayShiftWidget
+          shift={todayShift}
+          dateLabel={new Date().toLocaleDateString("zh-TW", {
+            month: "long",
+            day: "numeric",
+            weekday: "long",
+            timeZone: "Asia/Taipei",
+          })}
+        />
         <UpcomingLeavesWidget items={upcomingLeaves} />
         <BirthdayWidget items={birthdays} />
         <AnniversaryWidget items={anniversaries} />
