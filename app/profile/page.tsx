@@ -1,12 +1,15 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { format } from "date-fns";
-import { Briefcase, CreditCard, Lock, User } from "lucide-react";
+import { Briefcase, CalendarDays, CreditCard, Lock, User } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { decryptPII, maskPII } from "@/lib/crypto";
+import { signIcalToken } from "@/lib/ical-token";
 import { GlassCard } from "@/components/glass-card";
 import { PageHeader } from "@/components/page-header";
 import { ProfileForm } from "./profile-form";
+import { IcalSubscribe } from "./ical-subscribe";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,13 @@ export default async function ProfilePage() {
 
   const nationalIdMasked = maskPII(decryptPII(user.profile?.nationalIdEncrypted));
   const bankAccountMasked = maskPII(decryptPII(user.profile?.bankAccountEncrypted));
+
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "";
+  const proto = hdrs.get("x-forwarded-proto") ?? "https";
+  const icalUrl = host
+    ? `${proto}://${host}/api/calendar/ical/${signIcalToken(user.id)}.ics`
+    : "";
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -78,6 +88,10 @@ export default async function ProfilePage() {
             emergencyContactPhone: user.profile?.emergencyContactPhone ?? "",
           }}
         />
+      </Section>
+
+      <Section icon={<CalendarDays className="h-4 w-4" />} title="我的行事曆訂閱" hint="同步到手機 Calendar">
+        <IcalSubscribe url={icalUrl} />
       </Section>
 
       <Section icon={<Lock className="h-4 w-4" />} title="薪資 / 證件資料" hint="僅 HR 可修改">
