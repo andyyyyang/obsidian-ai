@@ -33,9 +33,9 @@ function initials(name: string): string {
 }
 
 const sizes = {
-  sm: "h-7 w-7 text-[10px]",
-  md: "h-9 w-9 text-xs",
-  lg: "h-12 w-12 text-base",
+  sm: "h-7 w-7 min-h-[1.75rem] min-w-[1.75rem] text-[10px]",
+  md: "h-9 w-9 min-h-[2.25rem] min-w-[2.25rem] text-xs",
+  lg: "h-12 w-12 min-h-[3rem] min-w-[3rem] text-base",
 };
 
 export function Avatar({
@@ -51,7 +51,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white ring-2 ring-white/60 dark:ring-white/10",
+        "inline-flex flex-shrink-0 aspect-square items-center justify-center self-center rounded-full bg-gradient-to-br font-semibold text-white ring-2 ring-white/60 dark:ring-white/10",
         sizes[size],
         color,
         className,
