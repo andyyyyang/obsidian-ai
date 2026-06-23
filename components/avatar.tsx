@@ -51,7 +51,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white ring-2 ring-white/60 dark:ring-white/10",
+        "inline-flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white ring-2 ring-white/60 dark:ring-white/10",
         sizes[size],
         color,
         className,

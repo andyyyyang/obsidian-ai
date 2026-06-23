@@ -17,7 +17,7 @@ export default async function OfficesPage() {
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-          <Building2 className="h-6 w-6" />
+          <Building2 className="h-6 w-6 flex-shrink-0" />
           辦公地點與班別
         </h1>
         <p className="mt-1 text-sm text-slate-500">

@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Loader2, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -23,12 +21,14 @@ export function LoginForm() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error ?? "登入失敗");
+        setPending(false);
         return;
       }
-      toast.success("登入成功，歡迎回來");
-      router.replace("/");
-      router.refresh();
-    } finally {
+      // 硬跳轉：跳過 Next.js client-side RSC 等待，URL 立刻變、瀏覽器自己處理載入
+      window.location.assign("/");
+      // 不 setPending(false) — 整個頁面馬上被取代
+    } catch (err) {
+      toast.error("網路錯誤，請重試");
       setPending(false);
     }
   }

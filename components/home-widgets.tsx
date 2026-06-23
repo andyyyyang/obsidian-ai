@@ -177,7 +177,7 @@ function Widget({
     <GlassCard variant="strong" className="p-5">
       <div className="mb-3 flex items-center gap-2">
         <span
-          className={`flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br text-white ${accents[accent]}`}
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white ${accents[accent]}`}
         >
           {icon}
         </span>

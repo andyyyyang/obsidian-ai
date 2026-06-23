@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="sticky top-0 z-30 border-b border-white/40 bg-white/40 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
           <Link href="/admin" className="flex items-center gap-2 text-base font-bold text-gradient">
-            <LayoutDashboard className="h-5 w-5 text-ios-indigo" />
+            <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-ios-indigo" />
             HR 後台
           </Link>
           <nav className="ml-2 flex flex-wrap gap-1 text-sm">
@@ -52,7 +52,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             href="/"
             className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 flex-shrink-0" />
             返回主站
           </Link>
         </div>
