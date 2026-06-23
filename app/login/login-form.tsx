@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Loader2, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 export function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -24,9 +26,11 @@ export function LoginForm() {
         setPending(false);
         return;
       }
-      // 硬跳轉：跳過 Next.js client-side RSC 等待，URL 立刻變、瀏覽器自己處理載入
-      window.location.assign("/");
-      // 不 setPending(false) — 整個頁面馬上被取代
+      // 立刻停掉「登入中…」spinner，讓 loading.tsx 接手顯示
+      setPending(false);
+      // Next.js soft navigation → 馬上觸發 app/loading.tsx 顯示 skeleton
+      router.replace("/");
+      router.refresh();
     } catch (err) {
       toast.error("網路錯誤，請重試");
       setPending(false);
