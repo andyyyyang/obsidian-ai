@@ -56,7 +56,7 @@ export default async function AdminAttendancePage({ searchParams }: { searchPara
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Clock className="h-6 w-6" />
+            <Clock className="h-6 w-6 flex-shrink-0" />
             員工出勤總覽
           </h1>
           <p className="mt-1 text-sm text-slate-500">{year} 年 {month} 月</p>

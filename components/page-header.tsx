@@ -19,7 +19,7 @@ export function PageHeader({
           href={back.href}
           className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5 flex-shrink-0" />
           {back.label ?? "返回"}
         </Link>
       )}
