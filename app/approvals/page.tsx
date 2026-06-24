@@ -9,8 +9,6 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Avatar } from "@/components/avatar";
 import { DecideButtons } from "./decide-buttons";
-import { CorrectionDecideButtons } from "./correction-decide-buttons";
-import { tpeDateTimeString } from "@/lib/tz";
 
 export const dynamic = "force-dynamic";
 
@@ -30,15 +28,6 @@ export default async function ApprovalsPage() {
       requester: { select: { name: true, employeeNo: true, department: true } },
     },
     orderBy: { startDate: "asc" },
-  });
-
-  const pendingCorrections = await prisma.attendanceCorrection.findMany({
-    where:
-      session.role === "ADMIN"
-        ? { status: "PENDING" }
-        : { status: "PENDING", user: { managerId: session.userId } },
-    include: { user: { select: { name: true, employeeNo: true, department: true } } },
-    orderBy: { createdAt: "asc" },
   });
 
   const recentDecided = await prisma.leaveRequest.findMany({
@@ -77,24 +66,24 @@ export default async function ApprovalsPage() {
                   <div className="flex items-start gap-3">
                     <Avatar name={r.requester.name} size="md" />
                     <div>
-                    <div className="text-base font-semibold text-slate-900">
-                      {r.requester.name}
-                      <span className="ml-2 text-xs font-normal text-slate-500">
-                        {r.requester.employeeNo} · {r.requester.department ?? "—"}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 text-sm text-slate-700">
-                      {format(r.startDate, "yyyy-MM-dd")}
-                      {r.startDate.getTime() !== r.endDate.getTime() &&
-                        ` ~ ${format(r.endDate, "yyyy-MM-dd")}`}
-                      <span className="ml-2 text-gradient font-semibold">{r.days} 天</span>
-                      {r.isHalfDay && (
-                        <span className="ml-2 text-xs text-slate-500">
-                          半天 · {r.halfDayPeriod === "AM" ? "上午" : "下午"}
+                      <div className="text-base font-semibold text-slate-900">
+                        {r.requester.name}
+                        <span className="ml-2 text-xs font-normal text-slate-500">
+                          {r.requester.employeeNo} · {r.requester.department ?? "—"}
                         </span>
-                      )}
-                    </div>
-                    <div className="mt-1.5 text-sm text-slate-600">事由：{r.reason}</div>
+                      </div>
+                      <div className="mt-1.5 text-sm text-slate-700">
+                        {format(r.startDate, "yyyy-MM-dd")}
+                        {r.startDate.getTime() !== r.endDate.getTime() &&
+                          ` ~ ${format(r.endDate, "yyyy-MM-dd")}`}
+                        <span className="ml-2 text-gradient font-semibold">{r.days} 天</span>
+                        {r.isHalfDay && (
+                          <span className="ml-2 text-xs text-slate-500">
+                            半天 · {r.halfDayPeriod === "AM" ? "上午" : "下午"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 text-sm text-slate-600">事由：{r.reason}</div>
                     </div>
                   </div>
                   <span className="text-xs text-slate-400">{format(r.createdAt, "MM-dd HH:mm")}</span>
@@ -105,39 +94,6 @@ export default async function ApprovalsPage() {
           </ul>
         )}
       </GlassCard>
-
-      {pendingCorrections.length > 0 && (
-        <GlassCard variant="strong" className="mb-8 overflow-hidden">
-          <div className="border-b border-white/40 px-6 py-3 text-sm font-semibold text-slate-900">
-            待審補打卡申請（{pendingCorrections.length}）
-          </div>
-          <ul className="divide-y divide-white/40">
-            {pendingCorrections.map((c) => (
-              <li key={c.id} className="px-6 py-4">
-                <div className="mb-2 flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <Avatar name={c.user.name} size="md" />
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        {c.user.name}
-                        <span className="ml-2 text-xs font-normal text-slate-500">
-                          {c.user.employeeNo} · {c.user.department ?? "—"}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-sm text-slate-700">
-                        補登：{TYPE_LABEL[c.type]} → {tpeDateTimeString(c.proposedTime)}
-                      </div>
-                      <div className="mt-1 text-sm text-slate-600">原因：{c.reason}</div>
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-400">{format(c.createdAt, "MM-dd HH:mm")}</span>
-                </div>
-                <CorrectionDecideButtons id={c.id} />
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
-      )}
 
       <GlassCard variant="strong" className="p-7 animate-fade-in">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">最近處理</h2>
@@ -171,10 +127,3 @@ export default async function ApprovalsPage() {
     </main>
   );
 }
-
-const TYPE_LABEL: Record<string, string> = {
-  CLOCK_IN: "上班",
-  CLOCK_OUT: "下班",
-  BREAK_OUT: "外出",
-  BREAK_IN: "回來",
-};
