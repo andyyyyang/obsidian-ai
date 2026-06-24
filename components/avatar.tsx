@@ -21,8 +21,6 @@ function hash(s: string): number {
 
 function initials(name: string): string {
   if (!name) return "?";
-  // 中文：取後兩個字（姓+名首字常用方式：取最末兩字）
-  // 英文：取每段首字母
   const trimmed = name.trim();
   const englishMatch = trimmed.split(/\s+/).filter(Boolean);
   if (englishMatch.length > 1 && /^[a-zA-Z]/.test(englishMatch[0])) {
@@ -32,10 +30,10 @@ function initials(name: string): string {
   return trimmed.slice(-2);
 }
 
-const sizes = {
-  sm: "h-7 w-7 min-h-[1.75rem] min-w-[1.75rem] text-[10px]",
-  md: "h-9 w-9 min-h-[2.25rem] min-w-[2.25rem] text-xs",
-  lg: "h-12 w-12 min-h-[3rem] min-w-[3rem] text-base",
+const sizeMap = {
+  sm: { px: 28, font: "10px" },
+  md: { px: 36, font: "12px" },
+  lg: { px: 48, font: "16px" },
 };
 
 export function Avatar({
@@ -44,15 +42,29 @@ export function Avatar({
   className,
 }: {
   name: string;
-  size?: keyof typeof sizes;
+  size?: keyof typeof sizeMap;
   className?: string;
 }) {
   const color = palette[hash(name) % palette.length];
+  const { px, font } = sizeMap[size];
+  // inline style 是 CSS 最高優先級，無視任何父層 flex / stretch 行為，100% 保證正圓
+  const inlineStyle: React.CSSProperties = {
+    width: `${px}px`,
+    height: `${px}px`,
+    minWidth: `${px}px`,
+    minHeight: `${px}px`,
+    maxWidth: `${px}px`,
+    maxHeight: `${px}px`,
+    fontSize: font,
+    flexShrink: 0,
+    flexGrow: 0,
+    aspectRatio: "1 / 1",
+  };
   return (
     <span
+      style={inlineStyle}
       className={cn(
-        "inline-flex flex-shrink-0 aspect-square items-center justify-center self-center rounded-full bg-gradient-to-br font-semibold text-white ring-2 ring-white/60 dark:ring-white/10",
-        sizes[size],
+        "inline-flex items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white ring-2 ring-white/60 dark:ring-white/10",
         color,
         className,
       )}
