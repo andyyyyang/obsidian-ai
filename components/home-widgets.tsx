@@ -1,79 +1,8 @@
-import Link from "next/link";
 import { format } from "date-fns";
-import { Cake, CalendarCheck, Megaphone, PartyPopper, Pin } from "lucide-react";
+import { Cake, CalendarCheck, PartyPopper } from "lucide-react";
 import type { UpcomingAnniversary, UpcomingBirthday, UpcomingLeave } from "@/lib/widgets";
 import { GlassCard } from "@/components/glass-card";
 import { Avatar } from "@/components/avatar";
-
-export type RecentAnnouncement = {
-  id: string;
-  title: string;
-  authorName: string;
-  publishedAt: Date;
-  pinned: boolean;
-};
-
-export type TodayShift = {
-  startTime: string | null;
-  endTime: string | null;
-  note: string | null;
-};
-
-export function AnnouncementWidget({ items }: { items: RecentAnnouncement[] }) {
-  return (
-    <Widget icon={<Megaphone className="h-4 w-4" />} title="最新公告" accent="purple">
-      {items.length === 0 ? (
-        <Empty text="目前沒有公告" />
-      ) : (
-        <ul className="space-y-2">
-          {items.slice(0, 4).map((a) => (
-            <li key={a.id}>
-              <Link
-                href="/announcements"
-                className="block rounded-lg p-1.5 -mx-1.5 transition hover:bg-white/40"
-              >
-                <div className="flex items-baseline gap-1.5">
-                  {a.pinned && <Pin className="h-3 w-3 flex-shrink-0 text-amber-500" />}
-                  <span className="truncate text-sm font-medium">{a.title}</span>
-                </div>
-                <div className="mt-0.5 text-xs text-slate-500">
-                  {a.authorName} · {format(a.publishedAt, "MM-dd")}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Widget>
-  );
-}
-
-export function TodayShiftWidget({ shift, dateLabel }: { shift: TodayShift | null; dateLabel: string }) {
-  return (
-    <Widget icon={<CalendarCheck className="h-4 w-4" />} title="今日班表" accent="blue">
-      <div className="text-xs text-slate-500">{dateLabel}</div>
-      {!shift ? (
-        <p className="mt-2 text-center text-xs text-slate-400">尚未發佈</p>
-      ) : !shift.startTime ? (
-        <p className="mt-2 text-center text-sm">
-          <span className="inline-block rounded-md bg-slate-200 px-2 py-0.5 text-xs text-slate-600">休</span>
-        </p>
-      ) : (
-        <div className="mt-2 text-center">
-          <div className="text-2xl font-bold tabular-nums text-slate-900">
-            {shift.startTime}
-            <span className="mx-1 text-slate-400">~</span>
-            {shift.endTime}
-          </div>
-          {shift.note && <div className="mt-0.5 text-xs text-slate-500">{shift.note}</div>}
-        </div>
-      )}
-      <Link href="/schedule" className="mt-2 block text-center text-xs text-blue-600 hover:underline">
-        查看本週 →
-      </Link>
-    </Widget>
-  );
-}
 
 export function BirthdayWidget({ items }: { items: UpcomingBirthday[] }) {
   return (
@@ -193,7 +122,7 @@ function Empty({ text }: { text: string }) {
 }
 
 function DayChip({ days }: { days: number }) {
-  const label = days === 0 ? "今天 🎉" : days === 1 ? "明天" : `${days} 天後`;
+  const label = days === 0 ? "今天" : days === 1 ? "明天" : `${days} 天後`;
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${

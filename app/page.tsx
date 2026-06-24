@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { format } from "date-fns";
-import { BriefcaseBusiness, Calendar, CalendarCheck, ClipboardList, Clock, Gamepad2, Megaphone, MessageSquare, Receipt, Settings, Sparkles, User as UserIcon } from "lucide-react";
+import { BriefcaseBusiness, Calendar, ClipboardList, Settings, User as UserIcon } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getBalance } from "@/lib/balance";
@@ -10,15 +10,12 @@ import { yearProgress } from "@/lib/widgets";
 import { LogoutButton } from "./logout-button";
 import { GlassCard } from "@/components/glass-card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AvatarPreview } from "@/components/avatar-preview";
-import { configToLook } from "@/lib/avatar";
+import { Avatar } from "@/components/avatar";
 import { YearProgress } from "@/components/year-progress";
 import { WidgetSkeleton, RecentRequestsSkeleton } from "./_widgets/skeleton";
 import { BirthdaysWidgetServer } from "./_widgets/birthdays";
 import { AnniversariesWidgetServer } from "./_widgets/anniversaries";
 import { UpcomingLeavesWidgetServer } from "./_widgets/upcoming-leaves";
-import { AnnouncementsWidgetServer } from "./_widgets/announcements";
-import { TodayShiftWidgetServer } from "./_widgets/today-shift";
 import { RecentRequestsServer } from "./_widgets/recent-requests";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +24,6 @@ export default async function HomePage() {
   const session = await getSession();
   if (!session.userId) redirect("/login");
 
-  // 只 fetch 立即要用的 user-specific 輕量資料，其他全部 stream
   const [user, balance] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
@@ -42,7 +38,6 @@ export default async function HomePage() {
         hireDate: true,
         employmentType: true,
         manager: { select: { name: true } },
-        avatarConfig: true,
       },
     }),
     getBalance(session.userId),
@@ -55,14 +50,7 @@ export default async function HomePage() {
     <main className="mx-auto max-w-6xl px-6 py-10">
       <header className="mb-10 flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/profile/avatar" className="group relative flex-shrink-0">
-            <div className="rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 p-2 transition group-hover:scale-105 dark:from-sky-900/40 dark:to-indigo-900/40">
-              <AvatarPreview look={configToLook(user.avatarConfig)} scale={2} />
-            </div>
-            <div className="absolute -bottom-1 -right-1 rounded-full bg-white p-1 shadow opacity-0 transition group-hover:opacity-100">
-              <Sparkles className="h-3 w-3 text-amber-500" />
-            </div>
-          </Link>
+          <Avatar name={user.name} size="lg" />
           <div>
             <p className="text-sm text-slate-500">嗨，歡迎回來</p>
             <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-slate-900">{user.name}</h1>
@@ -73,30 +61,6 @@ export default async function HomePage() {
           </div>
         </div>
         <nav className="flex flex-wrap items-center gap-2">
-          <NavLink href="/office" icon={<Gamepad2 className="h-4 w-4 flex-shrink-0" />}>
-            辦公室
-          </NavLink>
-          <NavLink href="/chat" icon={<MessageSquare className="h-4 w-4 flex-shrink-0" />}>
-            聊天室
-          </NavLink>
-          <NavLink href="/announcements" icon={<Megaphone className="h-4 w-4 flex-shrink-0" />}>
-            公告
-          </NavLink>
-          <NavLink href="/schedule" icon={<CalendarCheck className="h-4 w-4 flex-shrink-0" />}>
-            班表
-          </NavLink>
-          <NavLink href="/profile/avatar" icon={<Sparkles className="h-4 w-4 flex-shrink-0" />}>
-            角色
-          </NavLink>
-          <NavLink href="/clock" icon={<Clock className="h-4 w-4 flex-shrink-0" />}>
-            打卡
-          </NavLink>
-          <NavLink href="/attendance" icon={<ClipboardList className="h-4 w-4 flex-shrink-0" />}>
-            出勤
-          </NavLink>
-          <NavLink href="/payroll" icon={<Receipt className="h-4 w-4 flex-shrink-0" />}>
-            薪資單
-          </NavLink>
           <NavLink href="/calendar" icon={<Calendar className="h-4 w-4 flex-shrink-0" />}>
             行事曆
           </NavLink>
@@ -157,14 +121,7 @@ export default async function HomePage() {
         )}
       </GlassCard>
 
-      {/* widgets — 每個獨立 stream，慢的不會擋住快的 */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Suspense fallback={<WidgetSkeleton title="最新公告" />}>
-          <AnnouncementsWidgetServer />
-        </Suspense>
-        <Suspense fallback={<WidgetSkeleton title="今日班表" />}>
-          <TodayShiftWidgetServer userId={user.id} />
-        </Suspense>
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <Suspense fallback={<WidgetSkeleton title="本週請假" />}>
           <UpcomingLeavesWidgetServer />
         </Suspense>
