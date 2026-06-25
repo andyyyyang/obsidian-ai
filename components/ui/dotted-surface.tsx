@@ -22,9 +22,9 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 	useEffect(() => {
 		if (!containerRef.current) return;
 
-		const SEPARATION = 150;
-		const AMOUNTX = 40;
-		const AMOUNTY = 60;
+		const SEPARATION = 90;
+		const AMOUNTX = 70;
+		const AMOUNTY = 100;
 
 		// Scene setup
 		const scene = new THREE.Scene();
