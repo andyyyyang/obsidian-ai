@@ -11,8 +11,7 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    // Placeholder to avoid SSR mismatch
-    return <div className="h-9 w-9 rounded-2xl bg-white/40" aria-hidden />;
+    return <div className="btn-icon" aria-hidden />;
   }
 
   const isDark = (theme === "system" ? resolvedTheme : theme) === "dark";
@@ -21,10 +20,10 @@ export function ThemeToggle() {
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       title={isDark ? "切換淺色" : "切換深色"}
-      className="btn-ghost h-9 w-9 !px-0"
+      className="btn-icon"
       aria-label="切換顏色模式"
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {isDark ? <Sun className="icon-md" /> : <Moon className="icon-md" />}
     </button>
   );
 }

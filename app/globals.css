@@ -229,6 +229,37 @@ html.dark ::-webkit-scrollbar-thumb {
     background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
     background-size: 200% 100%;
   }
+
+  /* ─── Icon 統一尺寸（全站規範） ───
+     icon-sm: 行內 12px；icon-md: 預設 16px；icon-lg: 標題 20px；icon-xl: 大標 24px
+     全部用 stroke-width: 2 保持視覺一致 */
+  .icon-sm { width: 0.75rem; height: 0.75rem; flex-shrink: 0; stroke-width: 2; }
+  .icon-md { width: 1rem; height: 1rem; flex-shrink: 0; stroke-width: 2; }
+  .icon-lg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; stroke-width: 2; }
+  .icon-xl { width: 1.5rem; height: 1.5rem; flex-shrink: 0; stroke-width: 2; }
+
+  /* icon-only 圓鈕的統一尺寸 */
+  .btn-icon {
+    @apply inline-flex flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-200;
+    width: 2.25rem;  /* 36px */
+    height: 2.25rem;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    color: rgb(51 65 85);
+  }
+  .btn-icon:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-1px);
+  }
+  html.dark .btn-icon {
+    background: rgba(30, 41, 59, 0.55);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgb(226 232 240);
+  }
+  html.dark .btn-icon:hover:not(:disabled) { background: rgba(30, 41, 59, 0.8); }
 }
 
 @keyframes skeleton-shimmer {
