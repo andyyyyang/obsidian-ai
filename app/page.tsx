@@ -48,42 +48,38 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-10 flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <Avatar name={user.name} size="lg" />
-          <div className="min-w-0 flex-1">
-            <p className="whitespace-nowrap text-xs text-slate-500 sm:text-sm">
-              {greeting()}，歡迎回來
-            </p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              {user.name}
-            </h1>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+          <div>
+            <p className="text-sm text-slate-500">{greeting()}，歡迎回來</p>
+            <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-slate-900">{user.name}</h1>
+            <p className="mt-1 text-sm text-slate-500">
               {user.department ?? "—"} · {user.jobTitle ?? "—"} · 員編 {user.employeeNo}
               {user.manager ? ` · 主管 ${user.manager.name}` : ""}
             </p>
           </div>
         </div>
-        <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <NavLink href="/calendar" icon={<Calendar className="icon-md" />}>
+        <nav className="flex flex-wrap items-center gap-2">
+          <NavLink href="/calendar" icon={<Calendar className="h-4 w-4 flex-shrink-0" />}>
             行事曆
           </NavLink>
           {(user.role === "MANAGER" || user.role === "ADMIN") && (
-            <NavLink href="/approvals" icon={<ClipboardList className="icon-md" />}>
+            <NavLink href="/approvals" icon={<ClipboardList className="h-4 w-4 flex-shrink-0" />}>
               待審
             </NavLink>
           )}
           {(user.role === "MANAGER" || user.role === "ADMIN") && (
-            <NavLink href="/manage" icon={<BriefcaseBusiness className="icon-md" />}>
+            <NavLink href="/manage" icon={<BriefcaseBusiness className="h-4 w-4 flex-shrink-0" />}>
               管理工具
             </NavLink>
           )}
           {user.role === "ADMIN" && (
-            <NavLink href="/admin" icon={<Settings className="icon-md" />}>
+            <NavLink href="/admin" icon={<Settings className="h-4 w-4 flex-shrink-0" />}>
               HR 後台
             </NavLink>
           )}
-          <NavLink href="/profile" icon={<UserIcon className="icon-md" />}>
+          <NavLink href="/profile" icon={<UserIcon className="h-4 w-4 flex-shrink-0" />}>
             個人手冊
           </NavLink>
           <ThemeToggle />
@@ -161,7 +157,7 @@ function NavLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="btn-ghost h-9 min-w-9 px-2 sm:px-4">
+    <Link href={href} className="btn-ghost">
       {icon}
       <span className="hidden sm:inline">{children}</span>
     </Link>

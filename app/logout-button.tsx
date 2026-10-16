@@ -16,12 +16,8 @@ export function LogoutButton() {
   }
 
   return (
-    <button
-      onClick={handleLogout}
-      disabled={pending}
-      className="btn-ghost h-9 min-w-9 px-2 sm:px-4"
-    >
-      {pending ? <Loader2 className="icon-md animate-spin" /> : <LogOut className="icon-md" />}
+    <button onClick={handleLogout} disabled={pending} className="btn-ghost">
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
       <span className="hidden sm:inline">{pending ? "登出中" : "登出"}</span>
     </button>
   );

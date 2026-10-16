@@ -11,37 +11,34 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-30 border-b border-white/40 bg-white/40 backdrop-blur-xl dark:border-white/5 dark:bg-slate-900/40">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
-          <Link
-            href="/admin"
-            className="flex items-center gap-1.5 whitespace-nowrap text-base font-bold text-gradient"
-          >
-            <LayoutDashboard className="icon-lg text-ios-indigo" />
-            <span className="hidden sm:inline">HR 後台</span>
+      <div className="sticky top-0 z-30 border-b border-white/40 bg-white/40 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
+          <Link href="/admin" className="flex items-center gap-2 text-base font-bold text-gradient">
+            <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-ios-indigo" />
+            HR 後台
           </Link>
-          <nav className="flex flex-1 flex-wrap items-center gap-1 text-sm">
-            <NavLink href="/admin/users" icon={<Users className="icon-md" />}>
+          <nav className="ml-2 flex flex-wrap gap-1 text-sm">
+            <NavLink href="/admin/users" icon={<Users className="h-4 w-4 flex-shrink-0" />}>
               員工
             </NavLink>
-            <NavLink href="/admin/balances" icon={<Calculator className="icon-md" />}>
+            <NavLink href="/admin/balances" icon={<Calculator className="h-4 w-4 flex-shrink-0" />}>
               餘額調整
             </NavLink>
-            <NavLink href="/admin/payouts" icon={<Wallet className="icon-md" />}>
+            <NavLink href="/admin/payouts" icon={<Wallet className="h-4 w-4 flex-shrink-0" />}>
               折發結算
             </NavLink>
-            <NavLink href="/admin/export" icon={<Download className="icon-md" />}>
+            <NavLink href="/admin/export" icon={<Download className="h-4 w-4 flex-shrink-0" />}>
               匯出
             </NavLink>
           </nav>
+          <div className="flex-1" />
           <ThemeToggle />
           <Link
             href="/"
-            className="inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-2xl px-2 text-sm text-slate-500 hover:bg-white/70 hover:text-slate-900 sm:px-3"
-            title="返回主站"
+            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
           >
-            <ArrowLeft className="icon-md" />
-            <span className="hidden sm:inline">返回主站</span>
+            <ArrowLeft className="h-4 w-4 flex-shrink-0" />
+            返回主站
           </Link>
         </div>
       </div>
@@ -62,10 +59,10 @@ function NavLink({
   return (
     <Link
       href={href}
-      className="inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-2xl px-2 text-slate-600 transition-all hover:bg-white/70 hover:text-slate-900 sm:px-3"
+      className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-1.5 text-slate-600 transition-all hover:bg-white/70 hover:text-slate-900"
     >
       {icon}
-      <span className="hidden sm:inline">{children}</span>
+      {children}
     </Link>
   );
 }
