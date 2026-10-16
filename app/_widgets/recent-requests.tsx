@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { GlassCard } from "@/components/glass-card";
 import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 
 export async function RecentRequestsServer({
   userId,
@@ -23,10 +24,12 @@ export async function RecentRequestsServer({
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900">最近的申請</h2>
         {showNewButton && (
-          <Link href="/leave/new" className="btn-primary">
-            <Plus className="h-4 w-4 flex-shrink-0" />
-            新增申請
-          </Link>
+          <Button variant="primary" asChild>
+            <Link href="/leave/new">
+              <Plus className="h-4 w-4" />
+              新增申請
+            </Link>
+          </Button>
         )}
       </div>
       {recentRequests.length === 0 ? (

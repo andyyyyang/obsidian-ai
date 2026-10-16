@@ -4,6 +4,7 @@ import Link from "next/link";
 import { addDays, format, isSameDay, subDays } from "date-fns";
 import { Cake, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import { Avatar } from "@/components/avatar";
+import { Button } from "@/components/ui/button";
 import type { CalendarEvents, LeaveEvent } from "../types";
 
 function leaveLabel(lv: LeaveEvent): string {
@@ -39,9 +40,13 @@ export function DayView({
   return (
     <div className="space-y-4">
       <div className="glass-strong flex items-center justify-between rounded-3xl p-4">
-        <button onClick={() => onCursorChange(subDays(cursor, 1))} className="btn-ghost h-9 w-9 !px-0">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onCursorChange(subDays(cursor, 1))}
+          icon={<ChevronLeft className="h-4 w-4" />}
+          aria-label="前一天"
+        />
         <div className="text-center">
           <div className="text-xs text-slate-500">{format(cursor, "yyyy 年")}</div>
           <div className="text-2xl font-bold tracking-tight text-slate-900">
@@ -56,15 +61,21 @@ export function DayView({
             )}
           </div>
         </div>
-        <button onClick={() => onCursorChange(addDays(cursor, 1))} className="btn-ghost h-9 w-9 !px-0">
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onCursorChange(addDays(cursor, 1))}
+          icon={<ChevronRight className="h-4 w-4" />}
+          aria-label="下一天"
+        />
       </div>
 
       {!isToday && (
-        <button onClick={() => onCursorChange(today)} className="btn-ghost mx-auto block text-xs">
-          回到今天
-        </button>
+        <div className="flex justify-center">
+          <Button variant="ghost" size="xs" onClick={() => onCursorChange(today)}>
+            回到今天
+          </Button>
+        </div>
       )}
 
       {isEmpty && (

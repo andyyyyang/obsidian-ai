@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Loader2, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type Manager = { id: string; name: string; employeeNo: string };
 
@@ -109,10 +110,13 @@ export function NewUserForm({ managers }: { managers: Manager[] }) {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={pending} className="btn-primary">
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-          {pending ? "建立中…" : "建立員工"}
-        </button>
+        <SubmitButton
+          pending={pending}
+          loadingText="建立中…"
+          icon={<UserPlus className="h-4 w-4" />}
+        >
+          建立員工
+        </SubmitButton>
       </div>
     </form>
   );

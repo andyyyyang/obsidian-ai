@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Briefcase, Check, Clock, CreditCard, Loader2, Lock, Mail, User } from "lucide-react";
+import { Briefcase, Check, Clock, CreditCard, Lock, Mail, User } from "lucide-react";
 import { toast } from "sonner";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { EmploymentPeriods } from "./employment-periods";
 
 type PeriodInitial = {
@@ -254,10 +255,14 @@ export function EditUserForm({
       </Section>
 
       <div className="sticky bottom-4 flex justify-end">
-        <button type="submit" disabled={pending} className="btn-primary px-6 py-2.5">
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {pending ? "儲存中…" : "儲存所有變更"}
-        </button>
+        <SubmitButton
+          pending={pending}
+          loadingText="儲存中…"
+          icon={<Check className="h-4 w-4" />}
+          size="lg"
+        >
+          儲存所有變更
+        </SubmitButton>
       </div>
     </form>
   );

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, Check, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Calendar, Check, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { creditedDays, formatService, suggestedHireDate, type Period } from "@/lib/service";
 
 type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
@@ -205,33 +207,38 @@ export function EmploymentPeriods({
                 />
                 計入年資
               </label>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => removeRow(i)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
                 aria-label="刪除"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                className="!text-rose-500 hover:!text-rose-700"
+              />
             </div>
           ))}
         </div>
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <button type="button" onClick={addRow} className="btn-ghost text-xs">
-          <Plus className="h-3.5 w-3.5" />
-          新增一段
-        </button>
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending}
-          className="btn-primary text-xs"
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={addRow}
+          icon={<Plus className="h-3.5 w-3.5" />}
         >
-          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          {pending ? "儲存中…" : "儲存經歷段"}
-        </button>
+          新增一段
+        </Button>
+        <SubmitButton
+          type="button"
+          pending={pending}
+          loadingText="儲存中…"
+          size="xs"
+          icon={<Save className="h-3.5 w-3.5" />}
+          onClick={save}
+        >
+          儲存經歷段
+        </SubmitButton>
       </div>
 
       {summary.days > 0 && (
@@ -242,14 +249,14 @@ export function EmploymentPeriods({
             （{summary.days} 天）
           </div>
           {diffWithHireDate && summary.suggested && onSuggestHireDate && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => onSuggestHireDate(summary.suggested!)}
-              className="btn-ghost text-xs"
+              icon={<Check className="h-3.5 w-3.5" />}
             >
-              <Check className="h-3.5 w-3.5" />
               套用建議到職日 {summary.suggested}
-            </button>
+            </Button>
           )}
         </div>
       )}

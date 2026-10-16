@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Loader2, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { toast } from "sonner";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export function LoginForm() {
   const router = useRouter();
@@ -67,10 +68,15 @@ export function LoginForm() {
           placeholder="••••••••"
         />
       </div>
-      <button type="submit" disabled={pending} className="btn-primary w-full py-2.5">
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-        {pending ? "登入中…" : "登入"}
-      </button>
+      <SubmitButton
+        pending={pending}
+        loadingText="登入中…"
+        icon={<LogIn className="h-4 w-4" />}
+        size="lg"
+        fullWidth
+      >
+        登入
+      </SubmitButton>
     </form>
   );
 }

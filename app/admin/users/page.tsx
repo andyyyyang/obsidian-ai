@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { GlassCard } from "@/components/glass-card";
 import { Avatar } from "@/components/avatar";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,12 @@ export default async function AdminUsersPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">員工列表</h1>
           <p className="mt-1 text-sm text-slate-500">共 {users.length} 位</p>
         </div>
-        <Link href="/admin/users/new" className="btn-primary">
-          <Plus className="h-4 w-4" />
-          新增員工
-        </Link>
+        <Button variant="primary" asChild>
+          <Link href="/admin/users/new">
+            <Plus className="h-4 w-4" />
+            新增員工
+          </Link>
+        </Button>
       </div>
       <GlassCard variant="strong" className="overflow-hidden animate-fade-in">
         <div className="overflow-x-auto">

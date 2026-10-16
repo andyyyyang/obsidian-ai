@@ -1,13 +1,16 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { ClientOnly } from "@/components/ui/client-only";
+import { DottedSurface } from "@/components/ui/dotted-surface";
 
-// 在 client 包裝一層：only load three.js on client，WebGL 失敗不炸整頁
-const DottedSurface = dynamic(
-  () => import("@/components/ui/dotted-surface").then((m) => m.DottedSurface),
-  { ssr: false },
-);
-
+/**
+ * three.js 動畫只在 client 載入，避免 SSR 階段碰到 window/WebGL。
+ * 用統一的 ClientOnly 包裝（取代之前 next/dynamic ssr:false 的做法）。
+ */
 export function DottedSurfaceClient() {
-  return <DottedSurface />;
+  return (
+    <ClientOnly>
+      <DottedSurface />
+    </ClientOnly>
+  );
 }
