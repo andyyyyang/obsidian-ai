@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { GlassCard } from "@/components/glass-card";
-import { DottedSurface } from "@/components/ui/dotted-surface";
 import { cn } from "@/lib/utils";
 import { LoginForm } from "./login-form";
+import { DottedSurfaceClient } from "./dotted-surface-client";
 
 export default async function LoginPage() {
   const session = await getSession();
@@ -14,8 +14,8 @@ export default async function LoginPage() {
 
   return (
     <>
-      {/* 3D 動畫背景 — 鋪滿整個視窗，pointer-events-none */}
-      <DottedSurface />
+      {/* 3D 動畫背景 — client-only wrapper，SSR 跳過、WebGL 失敗靜默回退 */}
+      <DottedSurfaceClient />
 
       {/* 中央徑向光暈，把焦點集中在登入卡 */}
       <div
