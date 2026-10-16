@@ -52,10 +52,10 @@ export default async function HomePage() {
         <div className="flex items-center gap-4">
           <Avatar name={user.name} size="lg" />
           <div>
-            <p className="text-sm text-slate-500">嗨，歡迎回來</p>
+            <p className="text-sm text-slate-500">{greeting()}，歡迎回來</p>
             <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-slate-900">{user.name}</h1>
             <p className="mt-1 text-sm text-slate-500">
-              {user.department} · {user.jobTitle} · 員編 {user.employeeNo}
+              {user.department ?? "—"} · {user.jobTitle ?? "—"} · 員編 {user.employeeNo}
               {user.manager ? ` · 主管 ${user.manager.name}` : ""}
             </p>
           </div>
@@ -88,8 +88,15 @@ export default async function HomePage() {
       </header>
 
       <GlassCard variant="strong" className="mb-6 p-7">
-        <div className="mb-5 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">本年度特休</h2>
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-lg font-semibold text-slate-900">本年度特休</h2>
+            {balance.year && balance.annualLeaveEnabled && (
+              <span className="rounded-full bg-ios-blue/10 px-2 py-0.5 text-[10px] font-semibold text-ios-blue">
+                週期進度 {progress}%
+              </span>
+            )}
+          </div>
           {balance.year && (
             <span className="text-xs text-slate-500">
               週年度 {format(balance.year.start, "yyyy-MM-dd")} ~ {format(balance.year.end, "yyyy-MM-dd")}
@@ -161,6 +168,18 @@ function employmentLabel(t: string): string {
   return (
     { FULL_TIME: "正職", PART_TIME: "兼職", CONTRACT: "約聘", INTERN: "工讀 / 實習" }[t] ?? t
   );
+}
+
+function greeting(): string {
+  // 以台北時區判斷早上/下午/晚上
+  const h = Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "Asia/Taipei" }).format(new Date()),
+  );
+  if (h < 5) return "夜深了";
+  if (h < 11) return "早安";
+  if (h < 14) return "午安";
+  if (h < 18) return "下午好";
+  return "晚安";
 }
 
 function Stat({ label, value, emphasis }: { label: string; value: number; emphasis?: boolean }) {
