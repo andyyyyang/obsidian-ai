@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a84ff"/>
+      <stop offset="1" stop-color="#5e5ce6"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
+  <g fill="#ffffff">
+    <!-- Sparkles main -->
+    <path d="M90 42 L96 72 L126 78 L96 84 L90 114 L84 84 L54 78 L84 72 Z"/>
+    <!-- Small sparkle top-right -->
+    <path d="M135 50 L138 62 L150 65 L138 68 L135 80 L132 68 L120 65 L132 62 Z"/>
+  </g>
+</svg>
