@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addMonths, addWeeks, format, startOfMonth, subMonths, subWeeks } from "date-fns";
-import { Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, Rss } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Rss } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "@/components/icons/glass-icons";
 import { MonthView } from "./views/month-view";
 import { WeekView } from "./views/week-view";
 import { DayView } from "./views/day-view";

@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
-import { CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { CalendarPlusIcon } from "@/components/icons/glass-icons";
 
 type Sub = {
   id: string;
@@ -136,7 +136,7 @@ export function BackfillForm({
           pending={pending}
           disabled={!days}
           loadingText="送出中…"
-          icon={<CalendarPlus className="h-4 w-4" />}
+          icon={<CalendarPlusIcon className="h-4 w-4" />}
         >
           確認補登
         </SubmitButton>

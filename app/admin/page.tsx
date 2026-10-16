@@ -1,15 +1,6 @@
 import Link from "next/link";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Cake,
-  CalendarRange,
-  ClipboardList,
-  TrendingUp,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Cake, CalendarRange, TrendingUp } from "lucide-react";
 import { LeaveStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAnniversaryYear } from "@/lib/leave";
@@ -17,6 +8,7 @@ import { getBalance } from "@/lib/balance";
 import { getUpcomingBirthdays, getUpcomingAnniversaries } from "@/lib/widgets";
 import { GlassCard } from "@/components/glass-card";
 import { Avatar } from "@/components/avatar";
+import { ClipboardListIcon, UsersIcon, WalletIcon } from "@/components/icons/glass-icons";
 import { DeptPieChart, MonthlyApprovedChart } from "@/components/admin-charts";
 
 export const dynamic = "force-dynamic";
@@ -160,7 +152,7 @@ export default async function AdminHome() {
           label="在職員工"
           value={userCount}
           suffix="人"
-          icon={<Users className="h-5 w-5" />}
+          icon={<UsersIcon className="h-5 w-5" />}
           tone="blue"
         />
         <Card
@@ -168,7 +160,7 @@ export default async function AdminHome() {
           label="待審申請"
           value={pendingCount}
           suffix="筆"
-          icon={<ClipboardList className="h-5 w-5" />}
+          icon={<ClipboardListIcon className="h-5 w-5" />}
           tone={pendingCount > 0 ? "amber" : "blue"}
         />
         <Card
@@ -176,7 +168,7 @@ export default async function AdminHome() {
           label="待結算折發"
           value={pendingPayout}
           suffix="人"
-          icon={<Wallet className="h-5 w-5" />}
+          icon={<WalletIcon className="h-5 w-5" />}
           tone={pendingPayout > 0 ? "amber" : "blue"}
         />
         <Card
@@ -184,7 +176,7 @@ export default async function AdminHome() {
           label="已結算折發"
           value={payoutCount}
           suffix="筆"
-          icon={<Wallet className="h-5 w-5" />}
+          icon={<WalletIcon className="h-5 w-5" />}
           tone="green"
         />
       </div>

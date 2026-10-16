@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DownloadIcon } from "@/components/icons/glass-icons";
 
 export function ExportForm() {
   const [from, setFrom] = useState("");
@@ -30,7 +30,7 @@ export function ExportForm() {
       </div>
       <Button variant="primary" size="lg" fullWidth asChild>
         <a href={href}>
-          <Download className="h-4 w-4" />
+          <DownloadIcon className="h-4 w-4" />
           下載 CSV
         </a>
       </Button>

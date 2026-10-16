@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, Check, Plus, Save, Trash2 } from "lucide-react";
+import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { CalendarIcon } from "@/components/icons/glass-icons";
 import { creditedDays, formatService, suggestedHireDate, type Period } from "@/lib/service";
 
 type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
@@ -244,7 +245,7 @@ export function EmploymentPeriods({
       {summary.days > 0 && (
         <div className="glass-subtle flex flex-col gap-2 rounded-2xl px-4 py-3 text-xs md:flex-row md:items-center md:justify-between">
           <div>
-            <Calendar className="mr-1 inline h-3.5 w-3.5 text-ios-indigo" />
+            <CalendarIcon className="mr-1 inline h-3.5 w-3.5" />
             計入年資合計：<strong className="text-gradient text-sm">{summary.label}</strong>
             （{summary.days} 天）
           </div>
