@@ -14,19 +14,44 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%)",
-          color: "white",
+          background: "linear-gradient(145deg, #3a3a3a 0%, #0a0a0a 100%)",
+          color: "#f5f5f5",
           // iOS 本身會套圓角，不用自己加 border-radius
           fontSize: 120,
           fontWeight: 800,
           fontFamily: "sans-serif",
-          // 字稍微上提視覺居中（中文方塊字 baseline 偏下）
           paddingBottom: 10,
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* 右上角裝飾小點（視覺層次） */}
+        {/* 上方光澤：模擬 glass icon 的 highlight */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "48%",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%)",
+            display: "flex",
+          }}
+        />
+        {/* 底部微弱反射 */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "25%",
+            background:
+              "linear-gradient(0deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%)",
+            display: "flex",
+          }}
+        />
+        {/* 右上角裝飾小點（保留視覺層次） */}
         <div
           style={{
             position: "absolute",
@@ -35,7 +60,7 @@ export default function AppleIcon() {
             width: 14,
             height: 14,
             borderRadius: 7,
-            background: "rgba(255,255,255,0.3)",
+            background: "rgba(255,255,255,0.35)",
             display: "flex",
           }}
         />
@@ -47,7 +72,7 @@ export default function AppleIcon() {
             width: 6,
             height: 6,
             borderRadius: 3,
-            background: "rgba(255,255,255,0.4)",
+            background: "rgba(255,255,255,0.45)",
             display: "flex",
           }}
         />
