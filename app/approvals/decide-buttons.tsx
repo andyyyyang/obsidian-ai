@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Loader2, X, XCircle } from "lucide-react";
+import { Check, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export function DecideButtons({ id }: { id: string }) {
   const router = useRouter();
@@ -35,14 +37,21 @@ export function DecideButtons({ id }: { id: string }) {
   if (mode === "idle") {
     return (
       <div className="flex gap-2">
-        <button onClick={() => setMode("approve")} className="btn-success">
-          <Check className="h-4 w-4" />
+        <Button
+          variant="success"
+          onClick={() => setMode("approve")}
+          icon={<Check className="h-4 w-4" />}
+        >
           核准
-        </button>
-        <button onClick={() => setMode("reject")} className="btn-ghost text-rose-700 hover:text-rose-800">
-          <XCircle className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => setMode("reject")}
+          icon={<XCircle className="h-4 w-4" />}
+          className="!text-rose-700 hover:!text-rose-800"
+        >
           退回
-        </button>
+        </Button>
       </div>
     );
   }
@@ -59,30 +68,33 @@ export function DecideButtons({ id }: { id: string }) {
         className="input resize-none"
       />
       <div className="flex justify-end gap-2">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => {
             setMode("idle");
             setNote("");
           }}
-          className="btn-ghost"
+          icon={<X className="h-4 w-4" />}
         >
-          <X className="h-4 w-4" />
           取消
-        </button>
-        <button
+        </Button>
+        <SubmitButton
+          type="button"
+          pending={pending}
+          loadingText="處理中…"
+          variant={mode === "approve" ? "success" : "danger"}
           onClick={submit}
-          disabled={pending || (mode === "reject" && !note.trim())}
-          className={mode === "approve" ? "btn-success" : "btn-danger"}
+          disabled={mode === "reject" && !note.trim()}
+          icon={
+            mode === "approve" ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )
+          }
         >
-          {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : mode === "approve" ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <XCircle className="h-4 w-4" />
-          )}
-          {pending ? "處理中…" : mode === "approve" ? "確認核准" : "確認退回"}
-        </button>
+          {mode === "approve" ? "確認核准" : "確認退回"}
+        </SubmitButton>
       </div>
     </div>
   );

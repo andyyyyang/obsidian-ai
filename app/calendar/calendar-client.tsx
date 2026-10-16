@@ -5,6 +5,7 @@ import { addMonths, addWeeks, format, startOfMonth, subMonths, subWeeks } from "
 import { Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, Rss } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { MonthView } from "./views/month-view";
 import { WeekView } from "./views/week-view";
 import { DayView } from "./views/day-view";
@@ -128,15 +129,23 @@ export function CalendarClient({
       <div className="glass-strong mb-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl p-3">
         {/* 左：上下切換 */}
         <div className="flex items-center gap-1">
-          <button onClick={() => shiftCursor(-1)} className="btn-ghost h-9 w-9 !px-0">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => shiftCursor(-1)}
+            icon={<ChevronLeft className="h-4 w-4" />}
+            aria-label="上一個"
+          />
           <h2 className="min-w-[10rem] px-2 text-center text-sm font-semibold text-slate-900">
             {titleLabel}
           </h2>
-          <button onClick={() => shiftCursor(1)} className="btn-ghost h-9 w-9 !px-0">
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => shiftCursor(1)}
+            icon={<ChevronRight className="h-4 w-4" />}
+            aria-label="下一個"
+          />
         </div>
 
         {/* 中：模式切換 */}
@@ -158,17 +167,23 @@ export function CalendarClient({
 
         {/* 右：今天 / 訂閱 */}
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => setCursor(new Date())}
-            className="btn-ghost text-xs"
+            icon={<CalendarIcon className="h-3.5 w-3.5" />}
           >
-            <CalendarIcon className="h-3.5 w-3.5" />
             今天
-          </button>
-          <button onClick={copyIcal} className="btn-ghost text-xs" title="複製 iCal 訂閱網址">
-            <Rss className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={copyIcal}
+            title="複製 iCal 訂閱網址"
+            icon={<Rss className="h-3.5 w-3.5" />}
+          >
             <span className="hidden sm:inline">訂閱</span>
-          </button>
+          </Button>
         </div>
       </div>
 

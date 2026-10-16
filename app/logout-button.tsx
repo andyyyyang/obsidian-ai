@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -16,9 +17,16 @@ export function LogoutButton() {
   }
 
   return (
-    <button onClick={handleLogout} disabled={pending} className="btn-ghost">
-      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-      <span className="hidden sm:inline">{pending ? "登出中" : "登出"}</span>
-    </button>
+    <SubmitButton
+      type="button"
+      variant="ghost"
+      size="md"
+      pending={pending}
+      loadingText="登出中"
+      icon={<LogOut className="h-4 w-4" />}
+      onClick={handleLogout}
+    >
+      <span className="hidden sm:inline">登出</span>
+    </SubmitButton>
   );
 }

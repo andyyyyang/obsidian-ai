@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, Check, Copy, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export function IcalSubscribe({ url }: { url: string }) {
   const [show, setShow] = useState(false);
@@ -37,13 +38,22 @@ export function IcalSubscribe({ url }: { url: string }) {
           className="flex-1 bg-transparent text-xs font-mono text-slate-700 focus:outline-none dark:text-slate-300"
           onFocus={(e) => e.currentTarget.select()}
         />
-        <button onClick={() => setShow((s) => !s)} className="btn-ghost h-8 w-8 !px-0" title={show ? "隱藏" : "顯示"}>
-          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        </button>
-        <button onClick={copy} className="btn-primary !py-1.5 text-xs">
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setShow((s) => !s)}
+          title={show ? "隱藏" : "顯示"}
+          icon={show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          aria-label={show ? "隱藏" : "顯示"}
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={copy}
+          icon={copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        >
           {copied ? "已複製" : "複製"}
-        </button>
+        </Button>
       </div>
 
       <details className="glass-subtle rounded-2xl p-4 text-sm text-slate-700 dark:text-slate-300">

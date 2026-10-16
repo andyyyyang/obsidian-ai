@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { Suspense } from "react";
 import { format } from "date-fns";
 import { BriefcaseBusiness, Calendar, ClipboardList, Settings, User as UserIcon } from "lucide-react";
@@ -11,6 +10,7 @@ import { LogoutButton } from "./logout-button";
 import { GlassCard } from "@/components/glass-card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar } from "@/components/avatar";
+import { NavLink } from "@/components/ui/nav-link";
 import { YearProgress } from "@/components/year-progress";
 import { WidgetSkeleton, RecentRequestsSkeleton } from "./_widgets/skeleton";
 import { BirthdaysWidgetServer } from "./_widgets/birthdays";
@@ -61,25 +61,25 @@ export default async function HomePage() {
           </div>
         </div>
         <nav className="flex flex-wrap items-center gap-2">
-          <NavLink href="/calendar" icon={<Calendar className="h-4 w-4 flex-shrink-0" />}>
+          <NavLink href="/calendar" icon={<Calendar className="h-4 w-4" />} variant="glass">
             行事曆
           </NavLink>
           {(user.role === "MANAGER" || user.role === "ADMIN") && (
-            <NavLink href="/approvals" icon={<ClipboardList className="h-4 w-4 flex-shrink-0" />}>
+            <NavLink href="/approvals" icon={<ClipboardList className="h-4 w-4" />} variant="glass">
               待審
             </NavLink>
           )}
           {(user.role === "MANAGER" || user.role === "ADMIN") && (
-            <NavLink href="/manage" icon={<BriefcaseBusiness className="h-4 w-4 flex-shrink-0" />}>
+            <NavLink href="/manage" icon={<BriefcaseBusiness className="h-4 w-4" />} variant="glass" activeMatch="prefix">
               管理工具
             </NavLink>
           )}
           {user.role === "ADMIN" && (
-            <NavLink href="/admin" icon={<Settings className="h-4 w-4 flex-shrink-0" />}>
+            <NavLink href="/admin" icon={<Settings className="h-4 w-4" />} variant="glass" activeMatch="prefix">
               HR 後台
             </NavLink>
           )}
-          <NavLink href="/profile" icon={<UserIcon className="h-4 w-4 flex-shrink-0" />}>
+          <NavLink href="/profile" icon={<UserIcon className="h-4 w-4" />} variant="glass">
             個人手冊
           </NavLink>
           <ThemeToggle />
@@ -144,23 +144,6 @@ export default async function HomePage() {
         <RecentRequestsServer userId={user.id} showNewButton={!!balance.year} />
       </Suspense>
     </main>
-  );
-}
-
-function NavLink({
-  href,
-  icon,
-  children,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link href={href} className="btn-ghost">
-      {icon}
-      <span className="hidden sm:inline">{children}</span>
-    </Link>
   );
 }
 

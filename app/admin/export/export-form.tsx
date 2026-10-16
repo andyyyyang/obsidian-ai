@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function ExportForm() {
   const [from, setFrom] = useState("");
@@ -27,10 +28,12 @@ export function ExportForm() {
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
         </div>
       </div>
-      <a href={href} className="btn-primary w-full py-2.5">
-        <Download className="h-4 w-4" />
-        下載 CSV
-      </a>
+      <Button variant="primary" size="lg" fullWidth asChild>
+        <a href={href}>
+          <Download className="h-4 w-4" />
+          下載 CSV
+        </a>
+      </Button>
       <p className="text-xs text-slate-500">不填日期則匯出全部紀錄。</p>
     </div>
   );

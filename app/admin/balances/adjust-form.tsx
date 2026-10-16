@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Loader2, Pencil, X } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export function AdjustForm({ userId, userName }: { userId: string; userName: string }) {
   const router = useRouter();
@@ -46,13 +48,14 @@ export function AdjustForm({ userId, userName }: { userId: string; userName: str
 
   if (!open) {
     return (
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-xl bg-white/60 px-2.5 py-1 text-xs text-slate-700 backdrop-blur transition-all hover:bg-white/90"
+        icon={<Pencil className="h-3 w-3" />}
       >
-        <Pencil className="h-3 w-3" />
         調整
-      </button>
+      </Button>
     );
   }
 
@@ -74,20 +77,23 @@ export function AdjustForm({ userId, userName }: { userId: string; userName: str
         className="input py-1.5 text-xs"
       />
       <div className="flex gap-1.5">
-        <button
+        <SubmitButton
+          type="button"
+          pending={pending}
+          size="xs"
           onClick={submit}
-          disabled={pending}
-          className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-ios-blue to-ios-indigo px-2 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+          icon={<Check className="h-3 w-3" />}
+          fullWidth
         >
-          {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
           確認
-        </button>
-        <button
+        </SubmitButton>
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={() => setOpen(false)}
-          className="inline-flex items-center justify-center gap-1 rounded-xl bg-white/60 px-2 py-1 text-xs text-slate-700 hover:bg-white/90"
-        >
-          <X className="h-3 w-3" />
-        </button>
+          icon={<X className="h-3 w-3" />}
+          aria-label="取消"
+        />
       </div>
     </div>
   );

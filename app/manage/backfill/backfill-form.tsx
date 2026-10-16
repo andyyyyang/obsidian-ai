@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
-import { CalendarPlus, Loader2 } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type Sub = {
   id: string;
@@ -131,10 +132,14 @@ export function BackfillForm({
         <span className="text-sm text-slate-600">
           將扣除 <strong className="text-gradient text-base">{days}</strong> 天特休
         </span>
-        <button type="submit" disabled={pending || !days} className="btn-primary">
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
-          {pending ? "送出中…" : "確認補登"}
-        </button>
+        <SubmitButton
+          pending={pending}
+          disabled={!days}
+          loadingText="送出中…"
+          icon={<CalendarPlus className="h-4 w-4" />}
+        >
+          確認補登
+        </SubmitButton>
       </div>
     </form>
   );

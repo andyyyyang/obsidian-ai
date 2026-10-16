@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
-import { Loader2, Send, X } from "lucide-react";
+import { Send, X } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 function diffDays(start: string, end: string): number {
   if (!start || !end) return 0;
@@ -143,18 +145,21 @@ export function LeaveForm({ remaining }: { remaining: number }) {
       </div>
 
       <div className="flex justify-end gap-3">
-        <button type="button" onClick={() => router.back()} className="btn-ghost">
-          <X className="h-4 w-4" />
-          取消
-        </button>
-        <button
-          type="submit"
-          disabled={pending || overBudget || computedDays === 0}
-          className="btn-primary"
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          icon={<X className="h-4 w-4" />}
         >
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {pending ? "送出中…" : "送出申請"}
-        </button>
+          取消
+        </Button>
+        <SubmitButton
+          pending={pending}
+          disabled={overBudget || computedDays === 0}
+          loadingText="送出中…"
+          icon={<Send className="h-4 w-4" />}
+        >
+          送出申請
+        </SubmitButton>
       </div>
     </form>
   );

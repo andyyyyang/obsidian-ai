@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export function CancelButton({ id }: { id: string }) {
   const router = useRouter();
@@ -27,9 +28,15 @@ export function CancelButton({ id }: { id: string }) {
   }
 
   return (
-    <button onClick={handleCancel} disabled={pending} className="btn-danger">
-      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-      {pending ? "取消中…" : "取消這筆申請"}
-    </button>
+    <SubmitButton
+      type="button"
+      pending={pending}
+      loadingText="取消中…"
+      variant="danger"
+      icon={<XCircle className="h-4 w-4" />}
+      onClick={handleCancel}
+    >
+      取消這筆申請
+    </SubmitButton>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { toast } from "sonner";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type Gender = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
 type MaritalStatus = "SINGLE" | "MARRIED" | "DIVORCED" | "WIDOWED" | "PREFER_NOT_TO_SAY";
@@ -123,10 +124,9 @@ export function ProfileForm({ initial }: { initial: Initial }) {
       </fieldset>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={pending} className="btn-primary">
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {pending ? "儲存中…" : "儲存變更"}
-        </button>
+        <SubmitButton pending={pending} loadingText="儲存中…" icon={<Check className="h-4 w-4" />}>
+          儲存變更
+        </SubmitButton>
       </div>
     </form>
   );
