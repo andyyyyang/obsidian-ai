@@ -14,69 +14,96 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(145deg, #3a3a3a 0%, #0a0a0a 100%)",
-          color: "#f5f5f5",
-          // iOS 本身會套圓角，不用自己加 border-radius
-          fontSize: 120,
-          fontWeight: 800,
-          fontFamily: "sans-serif",
-          paddingBottom: 10,
+          background: "linear-gradient(145deg, #fafafa 0%, #d4d4d4 100%)",
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* 上方光澤：模擬 glass icon 的 highlight */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "48%",
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%)",
-            display: "flex",
-          }}
-        />
-        {/* 底部微弱反射 */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "25%",
-            background:
-              "linear-gradient(0deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%)",
-            display: "flex",
-          }}
-        />
-        {/* 右上角裝飾小點（保留視覺層次） */}
-        <div
-          style={{
-            position: "absolute",
-            top: 24,
-            right: 24,
-            width: 14,
-            height: 14,
-            borderRadius: 7,
-            background: "rgba(255,255,255,0.35)",
-            display: "flex",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 44,
-            right: 42,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            background: "rgba(255,255,255,0.45)",
-            display: "flex",
-          }}
-        />
-        休
+        <svg
+          width="180"
+          height="180"
+          viewBox="0 0 180 180"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="caseBody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#4a4a4a" />
+              <stop offset="55%" stopColor="#1e1e1e" />
+              <stop offset="100%" stopColor="#060606" />
+            </linearGradient>
+            <linearGradient id="caseHandle" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3d3d3d" />
+              <stop offset="100%" stopColor="#141414" />
+            </linearGradient>
+            <linearGradient id="caseShine" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            </linearGradient>
+            <radialGradient id="plate" cx="0.5" cy="0.35" r="0.6">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.6)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            </radialGradient>
+          </defs>
+
+          {/* 背景底光（放射狀，給整張 icon 一點深度） */}
+          <rect x="0" y="0" width="180" height="180" fill="url(#plate)" />
+
+          {/* 公事包提把 */}
+          <path
+            d="M68 54 Q68 36 90 36 Q112 36 112 54"
+            stroke="url(#caseHandle)"
+            strokeWidth="9"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M68 54 Q68 36 90 36 Q112 36 112 54"
+            stroke="rgba(255,255,255,0.18)"
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            transform="translate(0,-2)"
+          />
+
+          {/* 公事包主體 */}
+          <path
+            d="M34 62 Q34 54 42 54 L138 54 Q146 54 146 62 L146 136 Q146 150 132 150 L48 150 Q34 150 34 136 Z"
+            fill="url(#caseBody)"
+          />
+
+          {/* 頂部光澤 */}
+          <path
+            d="M40 62 Q40 60 42 60 L138 60 Q140 60 140 62 L140 90 Q140 92 138 92 L42 92 Q40 92 40 90 Z"
+            fill="url(#caseShine)"
+          />
+
+          {/* 中央扣件/鎖扣 */}
+          <rect
+            x="80"
+            y="98"
+            width="20"
+            height="12"
+            rx="3"
+            fill="#2a2a2a"
+            stroke="rgba(255,255,255,0.25)"
+            strokeWidth="1"
+          />
+          <rect
+            x="85"
+            y="101"
+            width="10"
+            height="2.5"
+            rx="1.2"
+            fill="rgba(255,255,255,0.5)"
+          />
+
+          {/* 下方分隔線 */}
+          <path
+            d="M34 120 L146 120"
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth="1"
+          />
+        </svg>
       </div>
     ),
     { ...size },
