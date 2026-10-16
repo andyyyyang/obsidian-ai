@@ -13,28 +13,33 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(145deg, #3a3a3a 0%, #0a0a0a 100%)",
-          borderRadius: 8,
-          color: "#f5f5f5",
-          fontSize: 20,
-          fontWeight: 800,
-          fontFamily: "sans-serif",
-          position: "relative",
+          background: "linear-gradient(145deg, #fafafa 0%, #d4d4d4 100%)",
+          borderRadius: 6,
           overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "45%",
-            background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 100%)",
-            display: "flex",
-          }}
-        />
-        休
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="miniCase" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#4a4a4a" />
+              <stop offset="100%" stopColor="#070707" />
+            </linearGradient>
+          </defs>
+          {/* 提把 */}
+          <path
+            d="M12 10 Q12 6 16 6 Q20 6 20 10"
+            stroke="#1a1a1a"
+            strokeWidth="1.8"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* 主體 */}
+          <rect x="5" y="10" width="22" height="17" rx="2.5" fill="url(#miniCase)" />
+          {/* 頂光澤 */}
+          <rect x="6" y="11" width="20" height="5" rx="1" fill="rgba(255,255,255,0.22)" />
+          {/* 鎖扣 */}
+          <rect x="14" y="17" width="4" height="2.5" rx="0.6" fill="rgba(255,255,255,0.45)" />
+        </svg>
       </div>
     ),
     { ...size },
