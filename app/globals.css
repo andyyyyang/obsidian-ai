@@ -6,9 +6,19 @@
 
 :root {
   color-scheme: light;
+  /* Glass icon 顏色 token — 明亮模式用深黑漸層 + 純白高光 */
+  --gi-dark-1: #2a2a2a;
+  --gi-dark-2: #0a0a0a;
+  --gi-light-1: #ffffff;
+  --gi-light-2: #e2e2e2;
 }
 .dark {
   color-scheme: dark;
+  /* 深色模式反過來：淺灰漸層 base + 更亮高光 */
+  --gi-dark-1: #e8e8e8;
+  --gi-dark-2: #b0b0b0;
+  --gi-light-1: #ffffff;
+  --gi-light-2: #cfcfcf;
 }
 
 /* ─── 軟漸層 mesh 背景 ─── */

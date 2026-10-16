@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { UserPlusIcon } from "@/components/icons/glass-icons";
 
 type Manager = {
   id: string;
@@ -107,7 +107,7 @@ export function NewSubordinateForm({ manager, isAdmin }: { manager: Manager; isA
         <SubmitButton
           pending={pending}
           loadingText="建立中…"
-          icon={<UserPlus className="h-4 w-4" />}
+          icon={<UserPlusIcon className="h-4 w-4" />}
         >
           建立員工
         </SubmitButton>

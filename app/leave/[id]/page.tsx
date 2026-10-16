@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
-import { Calendar, Clock, FileText, MessageSquare, User as UserIcon } from "lucide-react";
+import { Clock, FileText, MessageSquare } from "lucide-react";
+import { CalendarIcon, UserIcon } from "@/components/icons/glass-icons";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { canCancel } from "@/lib/leave-actions";
@@ -53,7 +54,7 @@ export default async function LeaveDetailPage({ params }: { params: Promise<{ id
           {request.requester.name}
           <span className="ml-1 text-slate-500">（{request.requester.employeeNo}）</span>
         </Field>
-        <Field icon={<Calendar className="h-4 w-4" />} label="日期">
+        <Field icon={<CalendarIcon className="h-4 w-4" />} label="日期">
           {dateRange}
           {request.isHalfDay && (
             <span className="ml-2 text-xs text-slate-500">

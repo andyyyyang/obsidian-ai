@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Wallet, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { WalletIcon } from "@/components/icons/glass-icons";
 
 export function ProcessForm({
   userId,
@@ -62,7 +63,7 @@ export function ProcessForm({
         variant="primary"
         size="xs"
         onClick={() => setOpen(true)}
-        icon={<Wallet className="h-3 w-3" />}
+        icon={<WalletIcon className="h-3 w-3" />}
       >
         結算
       </Button>

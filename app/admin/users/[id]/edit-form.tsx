@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Briefcase, Check, Clock, CreditCard, Lock, Mail, User } from "lucide-react";
+import { Check, Clock, CreditCard, Lock, Mail } from "lucide-react";
+import { BriefcaseIcon, UserIcon } from "@/components/icons/glass-icons";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { EmploymentPeriods } from "./employment-periods";
@@ -129,7 +130,7 @@ export function EditUserForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Section icon={<Briefcase className="h-4 w-4" />} title="任職資料">
+      <Section icon={<BriefcaseIcon className="h-4 w-4" />} title="任職資料">
         <Grid>
           <ReadOnly label="員工編號" value={user.employeeNo} />
           <Field label="姓名"><input value={user.name} onChange={(e) => setU("name", e.target.value)} className="input" /></Field>
@@ -200,7 +201,7 @@ export function EditUserForm({
         />
       </Section>
 
-      <Section icon={<User className="h-4 w-4" />} title="個人基本資料">
+      <Section icon={<UserIcon className="h-4 w-4" />} title="個人基本資料">
         <Grid>
           <Field label="中文姓名"><input value={profile.chineseName} onChange={(e) => setP("chineseName", e.target.value)} className="input" /></Field>
           <Field label="英文姓名"><input value={profile.englishName} onChange={(e) => setP("englishName", e.target.value)} className="input" /></Field>

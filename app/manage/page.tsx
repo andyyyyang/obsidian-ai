@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowRight, CalendarPlus, ClipboardList, UserPlus, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { GlassCard } from "@/components/glass-card";
 import { Avatar } from "@/components/avatar";
+import {
+  CalendarPlusIcon,
+  ClipboardListIcon,
+  UserPlusIcon,
+  UsersIcon,
+} from "@/components/icons/glass-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -44,21 +50,21 @@ export default async function ManageHome() {
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <ActionCard
           href="/manage/users/new"
-          icon={<UserPlus className="h-5 w-5" />}
+          icon={<UserPlusIcon className="h-5 w-5" />}
           title="新增員工"
           desc="建立新員工帳號（直接指派為你的屬下）"
           tone="blue"
         />
         <ActionCard
           href="/manage/backfill"
-          icon={<CalendarPlus className="h-5 w-5" />}
+          icon={<CalendarPlusIcon className="h-5 w-5" />}
           title="補登請假"
           desc="將員工已經休過的特休登入系統"
           tone="purple"
         />
         <ActionCard
           href="/approvals"
-          icon={<ClipboardList className="h-5 w-5" />}
+          icon={<ClipboardListIcon className="h-5 w-5" />}
           title="待審申請"
           desc={`${pendingCount} 筆等待核准`}
           tone={pendingCount > 0 ? "amber" : "green"}
@@ -67,7 +73,7 @@ export default async function ManageHome() {
 
       <GlassCard variant="strong" className="p-6">
         <div className="mb-4 flex items-center gap-2">
-          <Users className="h-4 w-4 text-slate-500" />
+          <UsersIcon className="h-4 w-4" />
           <h2 className="text-sm font-semibold">直屬員工（{subordinates.length} 人）</h2>
         </div>
         {subordinates.length === 0 ? (

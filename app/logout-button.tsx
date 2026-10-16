@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LogOut } from "lucide-react";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { LogOutIcon } from "@/components/icons/glass-icons";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export function LogoutButton() {
       size="md"
       pending={pending}
       loadingText="登出中"
-      icon={<LogOut className="h-4 w-4" />}
+      icon={<LogOutIcon className="h-4 w-4" />}
       onClick={handleLogout}
     >
       <span className="hidden sm:inline">登出</span>

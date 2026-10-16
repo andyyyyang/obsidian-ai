@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { format } from "date-fns";
-import { Briefcase, CalendarDays, CreditCard, Lock, User } from "lucide-react";
+import { CalendarDays, CreditCard, Lock } from "lucide-react";
+import { BriefcaseIcon, UserIcon } from "@/components/icons/glass-icons";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { decryptPII, maskPII } from "@/lib/crypto";
@@ -57,7 +58,7 @@ export default async function ProfilePage() {
         back={{ href: "/", label: "回首頁" }}
       />
 
-      <Section icon={<Briefcase className="h-4 w-4" />} title="任職資料" hint="HR 維護">
+      <Section icon={<BriefcaseIcon className="h-4 w-4" />} title="任職資料" hint="HR 維護">
         <Grid>
           <ReadField label="員工編號" value={user.employeeNo} />
           <ReadField label="角色" value={roleLabels[user.role] ?? user.role} />
@@ -71,7 +72,7 @@ export default async function ProfilePage() {
         </Grid>
       </Section>
 
-      <Section icon={<User className="h-4 w-4" />} title="個人資料 / 聯絡方式" hint="可自行更新">
+      <Section icon={<UserIcon className="h-4 w-4" />} title="個人資料 / 聯絡方式" hint="可自行更新">
         <ProfileForm
           initial={{
             chineseName: user.profile?.chineseName ?? "",

@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getBalance } from "@/lib/balance";
 import { GlassCard } from "@/components/glass-card";
-import { Users, TrendingUp, AlertTriangle, PieChart } from "lucide-react";
+import { TrendingUp, AlertTriangle, PieChart } from "lucide-react";
+import { UsersIcon } from "@/components/icons/glass-icons";
 import { BalancesClient, type BalanceRow } from "./balances-client";
 
 export const dynamic = "force-dynamic";
@@ -100,7 +101,7 @@ export default async function AdminBalancesPage() {
       {/* KPI 摘要列 */}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
-          icon={<Users className="h-4 w-4" />}
+          icon={<UsersIcon className="h-4 w-4" />}
           label="享有特休員工"
           value={eligibleRows.length}
           suffix={`/ ${rows.length} 人`}
