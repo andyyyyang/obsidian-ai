@@ -22,68 +22,89 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 	useEffect(() => {
 		if (!containerRef.current) return;
 
+		// 檢查 WebGL 支援；不支援就靜默退回（避免某些手機 Safari / Private 模式黑屏）
+		try {
+			const testCanvas = document.createElement("canvas");
+			const gl =
+				testCanvas.getContext("webgl2") || testCanvas.getContext("webgl");
+			if (!gl) {
+				console.warn("[DottedSurface] WebGL not supported, skipping animation");
+				return;
+			}
+		} catch {
+			return;
+		}
+
 		const SEPARATION = 90;
 		const AMOUNTX = 70;
 		const AMOUNTY = 100;
 
-		// Scene setup
-		const scene = new THREE.Scene();
-		scene.fog = new THREE.Fog(0xffffff, 2000, 10000);
+		let scene: THREE.Scene;
+		let camera: THREE.PerspectiveCamera;
+		let renderer: THREE.WebGLRenderer;
+		let geometry: THREE.BufferGeometry;
+		let material: THREE.PointsMaterial;
 
-		const camera = new THREE.PerspectiveCamera(
-			60,
-			window.innerWidth / window.innerHeight,
-			1,
-			10000,
-		);
-		camera.position.set(0, 355, 1220);
+		try {
+			// Scene setup
+			scene = new THREE.Scene();
+			scene.fog = new THREE.Fog(0xffffff, 2000, 10000);
 
-		const renderer = new THREE.WebGLRenderer({
-			alpha: true,
-			antialias: true,
-		});
-		renderer.setPixelRatio(window.devicePixelRatio);
-		renderer.setSize(window.innerWidth, window.innerHeight);
-		renderer.setClearColor(scene.fog.color, 0);
+			camera = new THREE.PerspectiveCamera(
+				60,
+				window.innerWidth / window.innerHeight,
+				1,
+				10000,
+			);
+			camera.position.set(0, 355, 1220);
 
-		containerRef.current.appendChild(renderer.domElement);
+			renderer = new THREE.WebGLRenderer({
+				alpha: true,
+				antialias: true,
+			});
+			renderer.setPixelRatio(window.devicePixelRatio);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.setClearColor(scene.fog.color, 0);
 
-		// Create particles
-		const positions: number[] = [];
-		const colors: number[] = [];
+			containerRef.current.appendChild(renderer.domElement);
 
-		// Create geometry for all particles
-		const geometry = new THREE.BufferGeometry();
+			// Create geometry
+			const positions: number[] = [];
+			const colors: number[] = [];
+			geometry = new THREE.BufferGeometry();
 
-		for (let ix = 0; ix < AMOUNTX; ix++) {
-			for (let iy = 0; iy < AMOUNTY; iy++) {
-				const x = ix * SEPARATION - (AMOUNTX * SEPARATION) / 2;
-				const y = 0;
-				const z = iy * SEPARATION - (AMOUNTY * SEPARATION) / 2;
+			for (let ix = 0; ix < AMOUNTX; ix++) {
+				for (let iy = 0; iy < AMOUNTY; iy++) {
+					const x = ix * SEPARATION - (AMOUNTX * SEPARATION) / 2;
+					const y = 0;
+					const z = iy * SEPARATION - (AMOUNTY * SEPARATION) / 2;
 
-				positions.push(x, y, z);
-				if (resolvedTheme === "dark") {
-					colors.push(200, 200, 200);
-				} else {
-					colors.push(0, 0, 0);
+					positions.push(x, y, z);
+					if (resolvedTheme === "dark") {
+						colors.push(200, 200, 200);
+					} else {
+						colors.push(0, 0, 0);
+					}
 				}
 			}
+
+			geometry.setAttribute(
+				"position",
+				new THREE.Float32BufferAttribute(positions, 3),
+			);
+			geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+
+			material = new THREE.PointsMaterial({
+				size: 8,
+				vertexColors: true,
+				transparent: true,
+				opacity: 0.8,
+				sizeAttenuation: true,
+			});
+		} catch (err) {
+			console.warn("[DottedSurface] Three.js init failed, skipping:", err);
+			return;
 		}
-
-		geometry.setAttribute(
-			"position",
-			new THREE.Float32BufferAttribute(positions, 3),
-		);
-		geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-
-		// Create material
-		const material = new THREE.PointsMaterial({
-			size: 8,
-			vertexColors: true,
-			transparent: true,
-			opacity: 0.8,
-			sizeAttenuation: true,
-		});
 
 		// Create points object
 		const points = new THREE.Points(geometry, material);
@@ -94,25 +115,31 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 
 		// Animation function
 		const animate = () => {
-			animationId = requestAnimationFrame(animate);
+			try {
+				animationId = requestAnimationFrame(animate);
 
-			const positionAttribute = geometry.attributes.position;
-			const arr = positionAttribute.array as Float32Array;
+				const positionAttribute = geometry.attributes.position;
+				const arr = positionAttribute.array as Float32Array;
 
-			let i = 0;
-			for (let ix = 0; ix < AMOUNTX; ix++) {
-				for (let iy = 0; iy < AMOUNTY; iy++) {
-					const index = i * 3;
-					arr[index + 1] =
-						Math.sin((ix + count) * 0.3) * 50 +
-						Math.sin((iy + count) * 0.5) * 50;
-					i++;
+				let i = 0;
+				for (let ix = 0; ix < AMOUNTX; ix++) {
+					for (let iy = 0; iy < AMOUNTY; iy++) {
+						const index = i * 3;
+						arr[index + 1] =
+							Math.sin((ix + count) * 0.3) * 50 +
+							Math.sin((iy + count) * 0.5) * 50;
+						i++;
+					}
 				}
-			}
 
-			positionAttribute.needsUpdate = true;
-			renderer.render(scene, camera);
-			count += 0.1;
+				positionAttribute.needsUpdate = true;
+				renderer.render(scene, camera);
+				count += 0.1;
+			} catch (err) {
+				// 動畫中失敗就停止、不黑屏
+				cancelAnimationFrame(animationId);
+				console.warn("[DottedSurface] Animation error, stopped:", err);
+			}
 		};
 
 		// Handle window resize
