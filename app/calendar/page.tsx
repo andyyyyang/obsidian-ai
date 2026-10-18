@@ -21,18 +21,26 @@ function parseMonth(s: string | undefined): Date {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; focus?: string }>;
 }) {
   const session = await getSession();
   if (!session.userId) redirect("/login");
 
-  const { month } = await searchParams;
+  const { month, focus } = await searchParams;
   const cursor = parseMonth(month);
   // 預載 cursor 的上下月 + 當月（共 3 個月）
   const from = subMonths(startOfMonth(cursor), 1);
   const to = addMonths(startOfMonth(cursor), 2);
 
-  const [leaves, birthdays, anniversaries] = await Promise.all([
+  // 可選員工：ADMIN 看全部、MANAGER 看自己+直屬、EMPLOYEE 只有自己（picker 會隱藏）
+  const peopleWhere =
+    session.role === "ADMIN"
+      ? { active: true }
+      : session.role === "MANAGER"
+        ? { OR: [{ id: session.userId }, { managerId: session.userId }], active: true }
+        : { id: session.userId };
+
+  const [leaves, birthdays, anniversaries, peopleRaw] = await Promise.all([
     prisma.leaveRequest.findMany({
       where: {
         status: { in: [LeaveStatus.APPROVED, LeaveStatus.PENDING] },
@@ -43,7 +51,26 @@ export default async function CalendarPage({
     }),
     getBirthdaysInRange(from, to),
     getAnniversariesInRange(from, to),
+    prisma.user.findMany({
+      where: peopleWhere,
+      orderBy: { employeeNo: "asc" },
+      select: { id: true, name: true, employeeNo: true, department: true },
+    }),
   ]);
+
+  const people = peopleRaw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    employeeNo: p.employeeNo,
+    department: p.department,
+  }));
+
+  // ?focus=id1,id2 — 只保留合法的 id（不能看別人就自動忽略）
+  const allowedIds = new Set(people.map((p) => p.id));
+  const initialFocus = (focus ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && allowedIds.has(s));
 
   const initial = {
     leaves: leaves.map((r) => ({
@@ -93,6 +120,8 @@ export default async function CalendarPage({
         initialMonth={format(cursor, "yyyy-MM")}
         icalToken={icalToken}
         origin={origin}
+        people={people}
+        initialFocus={initialFocus}
       />
     </main>
   );

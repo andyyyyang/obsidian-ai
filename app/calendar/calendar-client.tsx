@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addMonths, addWeeks, format, startOfMonth, subMonths, subWeeks } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Rss } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Rss, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "@/components/icons/glass-icons";
@@ -11,6 +12,7 @@ import { MonthView } from "./views/month-view";
 import { WeekView } from "./views/week-view";
 import { DayView } from "./views/day-view";
 import { DaySheet } from "./day-sheet";
+import { PeoplePicker, type Person } from "./people-picker";
 import type { CalendarEvents, CalendarMode } from "./types";
 
 type Initial = {
@@ -54,13 +56,19 @@ export function CalendarClient({
   initialMonth,
   icalToken,
   origin,
+  people,
+  initialFocus,
 }: {
   initial: Initial;
   meId: string;
   initialMonth: string; // yyyy-MM
   icalToken: string;
   origin: string;
+  people: Person[];
+  initialFocus: string[];
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [mode, setMode] = useState<CalendarMode>("month");
   const [cursor, setCursor] = useState<Date>(() => new Date(`${initialMonth}-01T00:00:00`));
   const [events, setEvents] = useState<CalendarEvents>(() => deserialize(initial));
@@ -70,6 +78,36 @@ export function CalendarClient({
   }));
   const [sheetDate, setSheetDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
+  const [focus, setFocus] = useState<string[]>(initialFocus);
+  const firstFocusSync = useRef(true);
+
+  // 把 focus 同步到 URL — 分享連結 / 重整 / 回頁都能保留
+  useEffect(() => {
+    if (firstFocusSync.current) {
+      firstFocusSync.current = false;
+      return;
+    }
+    const params = new URLSearchParams();
+    if (focus.length > 0) params.set("focus", focus.join(","));
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [focus, router, pathname]);
+
+  // 過濾後的事件：空 focus 顯示全部；有 focus 只顯示那些人的 leave
+  // 生日 / 週年永遠保留（提醒資訊，跟請假是否相關都值得看到）
+  const filteredEvents = useMemo<CalendarEvents>(() => {
+    if (focus.length === 0) return events;
+    const set = new Set(focus);
+    return {
+      ...events,
+      leaves: events.leaves.filter((l) => set.has(l.requesterId)),
+    };
+  }, [events, focus]);
+
+  const focusedPeople = useMemo(
+    () => people.filter((p) => focus.includes(p.id)),
+    [people, focus],
+  );
 
   // 確保 cursor 在已載入範圍內，否則 fetch
   const ensureLoaded = useCallback(
@@ -166,7 +204,7 @@ export function CalendarClient({
           ))}
         </div>
 
-        {/* 右：今天 / 訂閱 */}
+        {/* 右：今天 / 選員工 / 訂閱 */}
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -176,6 +214,9 @@ export function CalendarClient({
           >
             今天
           </Button>
+          {people.length > 1 && (
+            <PeoplePicker people={people} meId={meId} focus={focus} onChange={setFocus} />
+          )}
           <Button
             variant="ghost"
             size="xs"
@@ -187,6 +228,36 @@ export function CalendarClient({
           </Button>
         </div>
       </div>
+
+      {/* Focus 狀態列：有 focus 時顯示誰正在被 overlay */}
+      {focus.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-ios-blue/10 px-3 py-2 text-xs text-ios-blue">
+          <span className="font-semibold">正在檢視：</span>
+          {focusedPeople.map((p) => (
+            <span
+              key={p.id}
+              className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 font-medium text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"
+            >
+              {p.id === meId ? "我" : p.name}
+              <button
+                type="button"
+                onClick={() => setFocus(focus.filter((id) => id !== p.id))}
+                className="rounded-full p-0.5 hover:bg-slate-200/60 dark:hover:bg-slate-700/50"
+                aria-label={`取消 ${p.name}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={() => setFocus([])}
+            className="ml-auto text-[11px] text-slate-500 hover:underline"
+          >
+            清除全部
+          </button>
+        </div>
+      )}
 
       {/* 圖例 */}
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
@@ -200,20 +271,20 @@ export function CalendarClient({
 
       {/* 視圖 */}
       {mode === "month" && (
-        <MonthView cursor={cursor} events={events} meId={meId} onPickDay={setSheetDate} />
+        <MonthView cursor={cursor} events={filteredEvents} meId={meId} onPickDay={setSheetDate} />
       )}
       {mode === "week" && (
-        <WeekView cursor={cursor} events={events} meId={meId} onPickDay={setSheetDate} />
+        <WeekView cursor={cursor} events={filteredEvents} meId={meId} onPickDay={setSheetDate} />
       )}
       {mode === "day" && (
-        <DayView cursor={cursor} events={events} meId={meId} onCursorChange={setCursor} />
+        <DayView cursor={cursor} events={filteredEvents} meId={meId} onCursorChange={setCursor} />
       )}
 
       {/* 抽屜 */}
       {sheetDate && (
         <DaySheet
           date={sheetDate}
-          events={events}
+          events={filteredEvents}
           meId={meId}
           onClose={() => setSheetDate(null)}
         />

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Popover } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import {
+  CalendarIcon,
   CalendarPlusIcon,
   WalletIcon,
   UsersIcon,
@@ -101,6 +102,14 @@ export function RowActions({
             label={row.pendingCount > 0 ? `待審申請（${row.pendingCount}）` : "待審申請"}
             onClick={() => {
               router.push("/approvals");
+              setMenuOpen(false);
+            }}
+          />
+          <MenuItem
+            icon={<CalendarIcon className="h-4 w-4" />}
+            label="在月曆上查看"
+            onClick={() => {
+              router.push(`/calendar?focus=${row.id}`);
               setMenuOpen(false);
             }}
           />
