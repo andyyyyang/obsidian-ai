@@ -1,50 +1,115 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { ArrowRight } from "lucide-react";
+import { LeaveStatus } from "@prisma/client";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getBalance } from "@/lib/balance";
 import { GlassCard } from "@/components/glass-card";
-import { Avatar } from "@/components/avatar";
 import {
   CalendarPlusIcon,
   ClipboardListIcon,
   UserPlusIcon,
-  UsersIcon,
 } from "@/components/icons/glass-icons";
+import { SubordinatesList } from "./_components/subordinates-list";
+import type { SubordinateRow } from "./_components/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManageHome() {
   const session = await getSession();
+  const isAdmin = session.role === "ADMIN";
 
-  const subordinates = await prisma.user.findMany({
-    where: session.role === "ADMIN" ? {} : { managerId: session.userId },
-    orderBy: { employeeNo: "asc" },
-    select: {
-      id: true,
-      employeeNo: true,
-      name: true,
-      department: true,
-      jobTitle: true,
-      hireDate: true,
-      active: true,
-    },
-  });
+  const where = isAdmin ? {} : { managerId: session.userId };
 
-  const pendingCount = await prisma.leaveRequest.count({
-    where: {
-      status: "PENDING",
-      requester: session.role === "ADMIN" ? {} : { managerId: session.userId },
-    },
-  });
+  const [subs, pendingCount] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { employeeNo: "asc" },
+      select: {
+        id: true,
+        employeeNo: true,
+        name: true,
+        email: true,
+        role: true,
+        department: true,
+        jobTitle: true,
+        employmentType: true,
+        hireDate: true,
+        active: true,
+        annualLeaveEnabled: true,
+      },
+    }),
+    prisma.leaveRequest.count({
+      where: {
+        status: "PENDING",
+        requester: isAdmin ? {} : { managerId: session.userId },
+      },
+    }),
+  ]);
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const rows: SubordinateRow[] = await Promise.all(
+    subs.map(async (u) => {
+      const [bal, pending, monthApproved] = await Promise.all([
+        getBalance(u.id).catch(() => null),
+        prisma.leaveRequest.count({
+          where: { requesterId: u.id, status: LeaveStatus.PENDING },
+        }),
+        prisma.leaveRequest.aggregate({
+          where: {
+            requesterId: u.id,
+            status: LeaveStatus.APPROVED,
+            startDate: { gte: monthStart, lt: monthEnd },
+          },
+          _sum: { days: true },
+        }),
+      ]);
+      return {
+        id: u.id,
+        employeeNo: u.employeeNo,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        department: u.department,
+        jobTitle: u.jobTitle,
+        employmentType: u.employmentType,
+        hireDate: u.hireDate.toISOString(),
+        active: u.active,
+        annualLeaveEnabled: u.annualLeaveEnabled,
+        balance: bal
+          ? {
+              entitlement: bal.entitlement,
+              adjustments: bal.adjustments,
+              used: bal.used,
+              pending: bal.pending,
+              remaining: bal.remaining,
+              yearStart: bal.year?.start.toISOString() ?? null,
+              yearEnd: bal.year?.end.toISOString() ?? null,
+              annualLeaveEnabled: bal.annualLeaveEnabled,
+            }
+          : {
+              entitlement: 0,
+              adjustments: 0,
+              used: 0,
+              pending: 0,
+              remaining: 0,
+              yearStart: null,
+              yearEnd: null,
+              annualLeaveEnabled: u.annualLeaveEnabled,
+            },
+        pendingCount: pending,
+        thisMonthUsed: monthApproved._sum.days ?? 0,
+      };
+    }),
+  );
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="mb-2 text-3xl font-bold tracking-tight text-slate-900">管理工具</h1>
       <p className="mb-8 text-sm text-slate-500">
-        {session.role === "ADMIN"
-          ? "HR 模式 — 你可管理所有員工"
-          : "主管模式 — 你可管理直屬員工"}
+        {isAdmin ? "HR 模式 — 你可管理所有員工" : "主管模式 — 你可管理直屬員工"}
       </p>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -71,46 +136,8 @@ export default async function ManageHome() {
         />
       </div>
 
-      <GlassCard variant="strong" className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <UsersIcon className="h-4 w-4" />
-          <h2 className="text-sm font-semibold">直屬員工（{subordinates.length} 人）</h2>
-        </div>
-        {subordinates.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-500">目前沒有屬下，可使用上方「新增員工」建立。</p>
-        ) : (
-          <ul className="space-y-2">
-            {subordinates.map((u) => (
-              <li key={u.id}>
-                <Link
-                  href={`/manage/backfill?userId=${u.id}`}
-                  className="glass-subtle glass-hoverable flex items-center justify-between rounded-2xl px-4 py-3.5 text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar name={u.name} size="sm" />
-                    <div>
-                      <div className="font-medium text-slate-900">
-                        {u.name}
-                        <span className="ml-2 text-xs font-normal text-slate-500">{u.employeeNo}</span>
-                        {!u.active && (
-                          <span className="ml-2 rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                            已停用
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-0.5 text-xs text-slate-500">
-                        {u.department ?? "—"} · {u.jobTitle ?? "—"} · 到職 {format(u.hireDate, "yyyy-MM-dd")}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                    補登請假 <ArrowRight className="h-3 w-3" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+      <GlassCard variant="strong" className="p-5 md:p-6">
+        <SubordinatesList initialRows={rows} isAdmin={isAdmin} />
       </GlassCard>
     </main>
   );
