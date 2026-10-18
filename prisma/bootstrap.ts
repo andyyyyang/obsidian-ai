@@ -9,7 +9,7 @@
  */
 
 import { PrismaClient, EmploymentType, Role } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -36,7 +36,7 @@ async function main() {
     process.exit(1);
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, { cost: 12 });
   const today = new Date();
 
   await prisma.user.create({

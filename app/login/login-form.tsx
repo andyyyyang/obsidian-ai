@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -11,6 +11,12 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
+
+  // 進頁面立刻 prewarm — 讓 serverless function + Prisma + Postgres 連線
+  // 在使用者打字時就建好，按下登入時 bcrypt.compare 可以馬上開始。
+  useEffect(() => {
+    fetch("/api/auth/warm").catch(() => {});
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

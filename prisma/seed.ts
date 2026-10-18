@@ -6,7 +6,7 @@ import {
   MaritalStatus,
   LeaveStatus,
 } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 import { encryptPII } from "../lib/crypto";
 
 const prisma = new PrismaClient();
@@ -23,7 +23,7 @@ async function main() {
   await prisma.session.deleteMany();
   await prisma.user.deleteMany();
 
-  const password = await bcrypt.hash("password123", 12);
+  const password = await bcrypt.hash("password123", { cost: 12 });
 
   // ── Admin ─────────────────────────────────────────────
   const admin = await prisma.user.create({
