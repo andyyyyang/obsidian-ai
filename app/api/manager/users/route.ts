@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 import { EmploymentType, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   });
   if (dup) return NextResponse.json({ error: "員編或 Email 已存在" }, { status: 409 });
 
-  const passwordHash = await bcrypt.hash(data.password, 12);
+  const passwordHash = await bcrypt.hash(data.password, { cost: 12 });
   const created = await prisma.user.create({
     data: {
       employeeNo: data.employeeNo,

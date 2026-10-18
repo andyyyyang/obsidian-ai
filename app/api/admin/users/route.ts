@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 import { EmploymentType, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "員編或 Email 已存在" }, { status: 409 });
   }
 
-  const passwordHash = await bcrypt.hash(data.password, 12);
+  const passwordHash = await bcrypt.hash(data.password, { cost: 12 });
   // 預設特休資格：正職 → 享有；其他 → 不享有；可被 explicit 設定覆寫
   const defaultAnnualLeave = data.employmentType === EmploymentType.FULL_TIME;
   const created = await prisma.user.create({

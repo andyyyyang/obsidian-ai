@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 import { EmploymentType, Gender, MaritalStatus, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -116,7 +116,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const userPatch: Record<string, unknown> = {};
   if (data.name !== undefined) userPatch.name = data.name;
   if (data.email !== undefined) userPatch.email = data.email;
-  if (data.password !== undefined) userPatch.passwordHash = await bcrypt.hash(data.password, 12);
+  if (data.password !== undefined) userPatch.passwordHash = await bcrypt.hash(data.password, { cost: 12 });
   if (data.role !== undefined) userPatch.role = data.role;
   if (data.hireDate !== undefined) userPatch.hireDate = parseDateInput(data.hireDate);
   if (data.department !== undefined) userPatch.department = data.department;
