@@ -44,6 +44,7 @@ export function Popover({
   width?: string;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
   useOutsideClick(containerRef, onClose, open);
 
   React.useEffect(() => {
@@ -55,20 +56,56 @@ export function Popover({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // 動態把 popover 的最大高度綁到「觸發點下方還剩的視窗空間」—
+  // 選項列表太長時 (e.g. 員工 ⋯ 選單) 就能在 popover 內部滾動，
+  // 而不會往下滑出螢幕變成卡住點不到。觸發點下方不夠的話，
+  // flip 到觸發點上方展開。
+  const [style, setStyle] = React.useState<React.CSSProperties>({ width });
+  const [flipUp, setFlipUp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open || !containerRef.current) return;
+
+    const MARGIN = 16;
+    const MIN = 180;
+
+    function update() {
+      const rect = containerRef.current!.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom - MARGIN;
+      const above = rect.top - MARGIN;
+      const useUp = below < MIN && above > below;
+      const avail = Math.max(MIN, useUp ? above : below);
+      setFlipUp(useUp);
+      setStyle({ width, maxHeight: `${avail}px` });
+    }
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, width]);
+
   const alignClass = {
     start: "left-0",
     center: "left-1/2 -translate-x-1/2",
     end: "right-0",
   }[align];
 
+  const verticalClass = flipUp ? "bottom-full mb-1" : "top-full mt-1";
+
   return (
     <div ref={containerRef} className="relative inline-block">
       {trigger}
       {open && (
         <div
-          style={{ width }}
+          ref={panelRef}
+          style={style}
           className={cn(
-            "glass-strong absolute top-full z-30 mt-1 rounded-2xl p-3 shadow-xl",
+            "glass-strong absolute z-30 flex flex-col overflow-y-auto overscroll-contain rounded-2xl p-3 shadow-xl",
+            verticalClass,
             alignClass,
             className,
           )}
