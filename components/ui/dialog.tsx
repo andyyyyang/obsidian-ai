@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -56,7 +57,13 @@ export function Dialog({
     };
   }, [open]);
 
-  if (!open) return null;
+  // SSR 保護：document 只在 browser 存在
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!open || !mounted) return null;
 
   const maxWidthClass = {
     sm: "sm:max-w-sm",
@@ -75,9 +82,12 @@ export function Dialog({
       ? "w-full rounded-t-3xl sm:rounded-3xl"
       : "w-full rounded-3xl";
 
-  return (
+  // 用 portal 掛到 body — 否則任何 ancestor 有 backdrop-filter（glass-*）
+  // 都會把 position:fixed 的 containing block 綁死到那層祖先，Dialog
+  // 就只能在那小區塊裡顯示、遮罩也蓋不滿螢幕。
+  return createPortal(
     <div
-      className={cn("fixed inset-0 z-40 flex", positionClass)}
+      className={cn("fixed inset-0 z-50 flex", positionClass)}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -94,7 +104,8 @@ export function Dialog({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
