@@ -44,7 +44,6 @@ export function Popover({
   width?: string;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const panelRef = React.useRef<HTMLDivElement>(null);
   useOutsideClick(containerRef, onClose, open);
 
   React.useEffect(() => {
@@ -67,13 +66,14 @@ export function Popover({
     if (!open || !containerRef.current) return;
 
     const MARGIN = 16;
-    const MIN = 180;
+    const MIN = 180; // 最小 panel 高度，比這小就 scroll
+    const FLIP_THRESHOLD = 240; // 下方剩 < 這個數就考慮翻上
 
     function update() {
       const rect = containerRef.current!.getBoundingClientRect();
       const below = window.innerHeight - rect.bottom - MARGIN;
       const above = rect.top - MARGIN;
-      const useUp = below < MIN && above > below;
+      const useUp = below < FLIP_THRESHOLD && above > below;
       const avail = Math.max(MIN, useUp ? above : below);
       setFlipUp(useUp);
       setStyle({ width, maxHeight: `${avail}px` });
@@ -101,10 +101,9 @@ export function Popover({
       {trigger}
       {open && (
         <div
-          ref={panelRef}
           style={style}
           className={cn(
-            "glass-strong absolute z-30 flex flex-col overflow-y-auto overscroll-contain rounded-2xl p-3 shadow-xl",
+            "glass-strong absolute z-30 overflow-y-auto overscroll-contain rounded-2xl p-3 shadow-xl",
             verticalClass,
             alignClass,
             className,
