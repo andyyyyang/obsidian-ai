@@ -18,6 +18,7 @@ export type SubordinateRow = {
   hireDate: string;
   active: boolean;
   annualLeaveEnabled: boolean;
+  archivedAt: string | null;
   balance: {
     entitlement: number;
     adjustments: number;
@@ -61,6 +62,7 @@ export async function GET() {
       hireDate: true,
       active: true,
       annualLeaveEnabled: true,
+      archivedAt: true,
     },
   });
 
@@ -97,6 +99,7 @@ export async function GET() {
         hireDate: u.hireDate.toISOString(),
         active: u.active,
         annualLeaveEnabled: u.annualLeaveEnabled,
+        archivedAt: u.archivedAt?.toISOString() ?? null,
         balance: bal
           ? {
               entitlement: bal.entitlement,
