@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X, SlidersHorizontal, Download, CheckSquare, Square } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, X, SlidersHorizontal, CheckSquare, Square, LogOut, LogIn } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UsersIcon, DownloadIcon } from "@/components/icons/glass-icons";
 import { SubordinateRow } from "./subordinate-row";
@@ -17,7 +19,9 @@ export function SubordinatesList({
   initialRows: Row[];
   isAdmin: boolean;
 }) {
+  const router = useRouter();
   const [rows, setRows] = useState(initialRows);
+  const [batchPending, setBatchPending] = useState(false);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("active");
   const [deptFilter, setDeptFilter] = useState<string>("all");
@@ -115,6 +119,40 @@ export function SubordinatesList({
 
   function updateRow(id: string, patch: Partial<Row>) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+
+  async function batchToggleActive(active: boolean) {
+    const selectedRows = filtered.filter((r) => selected.has(r.id) && r.active !== active);
+    if (selectedRows.length === 0) {
+      toast("所選員工已經是這個狀態");
+      return;
+    }
+    const verb = active ? "恢復在職" : "辦理離職";
+    if (!confirm(`對所選 ${selectedRows.length} 位員工執行「${verb}」？`)) return;
+    setBatchPending(true);
+    let ok = 0;
+    let fail = 0;
+    for (const r of selectedRows) {
+      try {
+        const res = await fetch(`/api/admin/users/${r.id}/toggle-active`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ active }),
+        });
+        if (res.ok) {
+          ok += 1;
+          updateRow(r.id, { active });
+        } else {
+          fail += 1;
+        }
+      } catch {
+        fail += 1;
+      }
+    }
+    setBatchPending(false);
+    toast.success(`${verb} 完成：${ok} 位成功${fail ? `、${fail} 位失敗` : ""}`);
+    setSelected(new Set());
+    router.refresh();
   }
 
   function exportCsv() {
@@ -258,8 +296,8 @@ export function SubordinatesList({
             onChange={(v) => setActiveFilter(v as ActiveFilter)}
             options={[
               { value: "active", label: "在職" },
-              { value: "inactive", label: "已停用" },
-              { value: "all", label: "全部" },
+              { value: "inactive", label: "已離職" },
+              { value: "all", label: "全部（含離職）" },
             ]}
           />
           {depts.length > 0 && (
@@ -310,7 +348,7 @@ export function SubordinatesList({
 
       {/* 批次操作列 */}
       {batchMode && (
-        <div className="glass-subtle flex items-center gap-2 rounded-2xl px-3 py-2 text-xs">
+        <div className="glass-subtle flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2 text-xs">
           <button type="button" onClick={toggleAll} className="font-medium text-ios-blue hover:underline">
             {selected.size === filtered.length ? "取消全選" : "全選本頁"}
           </button>
@@ -318,6 +356,28 @@ export function SubordinatesList({
           <Button variant="ghost" size="xs" onClick={exportCsv} disabled={selected.size === 0}>
             匯出所選
           </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => batchToggleActive(false)}
+                disabled={selected.size === 0 || batchPending}
+                icon={<LogOut className="h-3 w-3 text-rose-500" />}
+              >
+                批次辦理離職
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => batchToggleActive(true)}
+                disabled={selected.size === 0 || batchPending}
+                icon={<LogIn className="h-3 w-3 text-emerald-500" />}
+              >
+                批次恢復在職
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="xs" onClick={() => setSelected(new Set())} disabled={selected.size === 0}>
             清除選取
           </Button>

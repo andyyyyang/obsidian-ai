@@ -2,7 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Power, KeyRound, ClipboardList, Mail } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  LogOut,
+  LogIn,
+  KeyRound,
+  ClipboardList,
+  Mail,
+  Trash2,
+  UserCog,
+  Sliders,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Popover } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -14,6 +25,8 @@ import {
 } from "@/components/icons/glass-icons";
 import { AdjustBalancePopover } from "./adjust-balance-popover";
 import { ResetPasswordDialog } from "./reset-password-dialog";
+import { QuickEditDialog } from "./quick-edit-dialog";
+import { ReassignManagerDialog } from "./reassign-manager-dialog";
 import type { SubordinateRow } from "./types";
 
 export function RowActions({
@@ -28,12 +41,17 @@ export function RowActions({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
+  const [reassignOpen, setReassignOpen] = useState(false);
   const [resetDialog, setResetDialog] = useState<{ open: boolean; password?: string }>({ open: false });
   const [pendingAction, setPendingAction] = useState(false);
 
   async function toggleActive() {
     const next = !row.active;
-    if (!confirm(next ? `啟用 ${row.name}？` : `停用 ${row.name}？\n（請假紀錄不會刪除，但無法再登入）`)) return;
+    const msg = next
+      ? `將 ${row.name} 恢復在職？\n帳號將可再次登入。`
+      : `辦理 ${row.name} 離職？\n請假與餘額紀錄會完整保留，但帳號無法再登入。`;
+    if (!confirm(msg)) return;
     setPendingAction(true);
     try {
       const res = await fetch(`/api/admin/users/${row.id}/toggle-active`, {
@@ -46,9 +64,36 @@ export function RowActions({
         toast.error(data.error ?? "操作失敗");
         return;
       }
-      toast.success(next ? "已啟用" : "已停用");
+      toast.success(next ? "已恢復在職" : "已辦理離職");
       onPatch({ active: next });
       setMenuOpen(false);
+    } finally {
+      setPendingAction(false);
+    }
+  }
+
+  async function safeDelete() {
+    const first = confirm(
+      `永久刪除 ${row.name}？\n\n只有在該員工沒有任何請假、餘額調整、折發紀錄時才會成功。\n如果已有紀錄，請改用「辦理離職」保留資料。`,
+    );
+    if (!first) return;
+    const typed = prompt(`最後確認：請輸入員工姓名「${row.name}」以永久刪除`);
+    if (typed !== row.name) {
+      if (typed !== null) toast.error("名稱不符，已取消");
+      return;
+    }
+    setPendingAction(true);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}/safe-delete`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "刪除失敗");
+        return;
+      }
+      toast.success(`已刪除 ${row.name}`);
+      setMenuOpen(false);
+      // 讓列表 refresh —— SubordinatesList 的 rows 是 state，重取最保險
+      router.refresh();
     } finally {
       setPendingAction(false);
     }
@@ -131,8 +176,24 @@ export function RowActions({
             <>
               <div className="my-1 border-t border-white/40 dark:border-slate-700/40" />
               <MenuItem
+                icon={<Sliders className="h-4 w-4 text-ios-indigo" />}
+                label="快速修正（部門／職稱／雇用）"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setQuickEditOpen(true);
+                }}
+              />
+              <MenuItem
+                icon={<UserCog className="h-4 w-4 text-ios-blue" />}
+                label="指派主管"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setReassignOpen(true);
+                }}
+              />
+              <MenuItem
                 icon={<Pencil className="h-4 w-4 text-ios-indigo" />}
-                label="編輯資料"
+                label="完整編輯（HR 頁）"
                 onClick={() => {
                   router.push(`/admin/users/${row.id}`);
                   setMenuOpen(false);
@@ -148,23 +209,31 @@ export function RowActions({
                 }}
               />
               <MenuItem
-                icon={<UsersIcon className="h-4 w-4" />}
-                label="員工頁完整檢視"
-                onClick={() => {
-                  router.push(`/admin/users/${row.id}`);
-                  setMenuOpen(false);
-                }}
-              />
-              <MenuItem
                 icon={<KeyRound className="h-4 w-4 text-amber-500" />}
                 label="重設密碼"
                 onClick={resetPassword}
                 disabled={pendingAction}
               />
+              <div className="my-1 border-t border-white/40 dark:border-slate-700/40" />
+              {row.active ? (
+                <MenuItem
+                  icon={<LogOut className="h-4 w-4 text-rose-500" />}
+                  label="辦理離職"
+                  onClick={toggleActive}
+                  disabled={pendingAction}
+                />
+              ) : (
+                <MenuItem
+                  icon={<LogIn className="h-4 w-4 text-emerald-500" />}
+                  label="恢復在職"
+                  onClick={toggleActive}
+                  disabled={pendingAction}
+                />
+              )}
               <MenuItem
-                icon={<Power className={`h-4 w-4 ${row.active ? "text-rose-500" : "text-emerald-500"}`} />}
-                label={row.active ? "停用員工" : "啟用員工"}
-                onClick={toggleActive}
+                icon={<Trash2 className="h-4 w-4 text-rose-600" />}
+                label="永久刪除（僅限無紀錄）"
+                onClick={safeDelete}
                 disabled={pendingAction}
               />
             </>
@@ -194,6 +263,25 @@ export function RowActions({
           name={row.name}
           password={resetDialog.password}
           onClose={() => setResetDialog({ open: false })}
+        />
+      )}
+
+      {quickEditOpen && (
+        <QuickEditDialog
+          row={row}
+          onClose={() => setQuickEditOpen(false)}
+          onPatched={(patch) => {
+            onPatch(patch);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {reassignOpen && (
+        <ReassignManagerDialog
+          row={row}
+          onClose={() => setReassignOpen(false)}
+          onPatched={() => router.refresh()}
         />
       )}
     </>

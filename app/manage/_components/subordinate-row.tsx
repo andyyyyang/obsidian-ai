@@ -66,7 +66,7 @@ export function SubordinateRow({
               )}
               {!row.active && (
                 <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
-                  已停用
+                  已離職
                 </span>
               )}
               {row.pendingCount > 0 && (
