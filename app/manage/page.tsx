@@ -36,6 +36,7 @@ export default async function ManageHome() {
         hireDate: true,
         active: true,
         annualLeaveEnabled: true,
+        archivedAt: true,
       },
     }),
     prisma.leaveRequest.count({
@@ -78,6 +79,7 @@ export default async function ManageHome() {
         hireDate: u.hireDate.toISOString(),
         active: u.active,
         annualLeaveEnabled: u.annualLeaveEnabled,
+        archivedAt: u.archivedAt?.toISOString() ?? null,
         balance: bal
           ? {
               entitlement: bal.entitlement,

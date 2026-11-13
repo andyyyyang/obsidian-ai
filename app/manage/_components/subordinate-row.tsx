@@ -64,9 +64,14 @@ export function SubordinateRow({
                   {row.role === "MANAGER" ? "主管" : "HR"}
                 </span>
               )}
-              {!row.active && (
+              {!row.active && !row.archivedAt && (
                 <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
                   已離職
+                </span>
+              )}
+              {row.archivedAt && (
+                <span className="rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                  已歸檔
                 </span>
               )}
               {row.pendingCount > 0 && (

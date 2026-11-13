@@ -28,6 +28,7 @@ model User {
   employmentType EmploymentType @default(FULL_TIME)
   active        Boolean  @default(true)
   annualLeaveEnabled Boolean @default(true)   // 是否享有特休（非正職預設關閉，HR 可手動勾選開啟）
+  archivedAt    DateTime?                    // 歸檔時間，NULL = 未歸檔；歸檔員工不顯示在主列表，可供事後永久刪除
 
   // 直屬主管（自關聯）
   managerId     String?

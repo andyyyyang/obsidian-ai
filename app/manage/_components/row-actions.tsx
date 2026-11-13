@@ -13,6 +13,9 @@ import {
   Trash2,
   UserCog,
   Sliders,
+  Archive,
+  ArchiveRestore,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover } from "@/components/ui/popover";
@@ -67,6 +70,68 @@ export function RowActions({
       toast.success(next ? "已恢復在職" : "已辦理離職");
       onPatch({ active: next });
       setMenuOpen(false);
+    } finally {
+      setPendingAction(false);
+    }
+  }
+
+  async function archive() {
+    if (!confirm(`將 ${row.name} 歸檔？\n帳號會從主列表隱藏，紀錄完整保留。要還原請切到「已歸檔」篩選，再點「取消歸檔」。`)) return;
+    setPendingAction(true);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}/archive`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "歸檔失敗");
+        return;
+      }
+      toast.success(`已歸檔 ${row.name}`);
+      onPatch({ archivedAt: data.archivedAt ?? new Date().toISOString() });
+      setMenuOpen(false);
+    } finally {
+      setPendingAction(false);
+    }
+  }
+
+  async function unarchive() {
+    if (!confirm(`取消歸檔 ${row.name}？\n會還原到「已離職」狀態，重新出現在列表。`)) return;
+    setPendingAction(true);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}/unarchive`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "操作失敗");
+        return;
+      }
+      toast.success("已取消歸檔");
+      onPatch({ archivedAt: null });
+      setMenuOpen(false);
+    } finally {
+      setPendingAction(false);
+    }
+  }
+
+  async function forceDelete() {
+    const first = confirm(
+      `永久刪除已歸檔的 ${row.name}？\n\n將連同所有請假 / 餘額調整 / 折發紀錄一起清除，\n此動作無法還原。`,
+    );
+    if (!first) return;
+    const typed = prompt(`最後確認：請輸入員工姓名「${row.name}」才會真的刪`);
+    if (typed !== row.name) {
+      if (typed !== null) toast.error("名稱不符，已取消");
+      return;
+    }
+    setPendingAction(true);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}/force-delete`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "刪除失敗");
+        return;
+      }
+      toast.success(`已永久刪除 ${row.name}`);
+      setMenuOpen(false);
+      router.refresh();
     } finally {
       setPendingAction(false);
     }
@@ -215,7 +280,23 @@ export function RowActions({
                 disabled={pendingAction}
               />
               <div className="my-1 border-t border-white/40 dark:border-slate-700/40" />
-              {row.active ? (
+              {row.archivedAt ? (
+                // 已歸檔：只給 restore + force-delete，其他操作封存不動
+                <>
+                  <MenuItem
+                    icon={<ArchiveRestore className="h-4 w-4 text-ios-blue" />}
+                    label="取消歸檔"
+                    onClick={unarchive}
+                    disabled={pendingAction}
+                  />
+                  <MenuItem
+                    icon={<AlertTriangle className="h-4 w-4 text-rose-600" />}
+                    label="永久刪除（含所有紀錄）"
+                    onClick={forceDelete}
+                    disabled={pendingAction}
+                  />
+                </>
+              ) : row.active ? (
                 <MenuItem
                   icon={<LogOut className="h-4 w-4 text-rose-500" />}
                   label="辦理離職"
@@ -223,19 +304,27 @@ export function RowActions({
                   disabled={pendingAction}
                 />
               ) : (
-                <MenuItem
-                  icon={<LogIn className="h-4 w-4 text-emerald-500" />}
-                  label="恢復在職"
-                  onClick={toggleActive}
-                  disabled={pendingAction}
-                />
+                <>
+                  <MenuItem
+                    icon={<LogIn className="h-4 w-4 text-emerald-500" />}
+                    label="恢復在職"
+                    onClick={toggleActive}
+                    disabled={pendingAction}
+                  />
+                  <MenuItem
+                    icon={<Archive className="h-4 w-4 text-amber-600" />}
+                    label="歸檔（從主列表移除）"
+                    onClick={archive}
+                    disabled={pendingAction}
+                  />
+                  <MenuItem
+                    icon={<Trash2 className="h-4 w-4 text-rose-600" />}
+                    label="永久刪除（僅限無紀錄）"
+                    onClick={safeDelete}
+                    disabled={pendingAction}
+                  />
+                </>
               )}
-              <MenuItem
-                icon={<Trash2 className="h-4 w-4 text-rose-600" />}
-                label="永久刪除（僅限無紀錄）"
-                onClick={safeDelete}
-                disabled={pendingAction}
-              />
             </>
           )}
         </div>

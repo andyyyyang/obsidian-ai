@@ -10,7 +10,7 @@ import { SubordinateRow } from "./subordinate-row";
 import type { SubordinateRow as Row } from "./types";
 
 type SortKey = "employeeNo" | "hireDate" | "remaining" | "monthUsed" | "pending";
-type ActiveFilter = "all" | "active" | "inactive";
+type ActiveFilter = "all" | "active" | "inactive" | "archived";
 
 export function SubordinatesList({
   initialRows,
@@ -44,11 +44,19 @@ export function SubordinatesList({
     return Array.from(s).sort();
   }, [rows]);
 
+  const archivedCount = useMemo(() => rows.filter((r) => r.archivedAt).length, [rows]);
+
   const filtered = useMemo(() => {
     let out = rows;
-    if (activeFilter !== "all") {
-      out = out.filter((r) => (activeFilter === "active" ? r.active : !r.active));
+    // 預設排除已歸檔；只有切到 "archived" / "all" 才會看見
+    if (activeFilter === "active") {
+      out = out.filter((r) => r.active && !r.archivedAt);
+    } else if (activeFilter === "inactive") {
+      out = out.filter((r) => !r.active && !r.archivedAt);
+    } else if (activeFilter === "archived") {
+      out = out.filter((r) => !!r.archivedAt);
     }
+    // "all" 不過濾，含歸檔一起看
     if (deptFilter !== "all") {
       out = out.filter((r) => (r.department ?? "") === deptFilter);
     }
@@ -297,7 +305,8 @@ export function SubordinatesList({
             options={[
               { value: "active", label: "在職" },
               { value: "inactive", label: "已離職" },
-              { value: "all", label: "全部（含離職）" },
+              { value: "archived", label: `已歸檔${archivedCount ? `（${archivedCount}）` : ""}` },
+              { value: "all", label: "全部" },
             ]}
           />
           {depts.length > 0 && (

@@ -10,6 +10,7 @@ export type SubordinateRow = {
   hireDate: string;
   active: boolean;
   annualLeaveEnabled: boolean;
+  archivedAt: string | null;
   balance: {
     entitlement: number;
     adjustments: number;
